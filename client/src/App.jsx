@@ -1,12 +1,11 @@
-import React from 'react'
+import LanguageTabs from "./components/LanguageTabs";
 
 function App() {
   return (
-    <div>
-      <h1>Hello!</h1>
-
+    <div className="min-h-screen bg-blue-100">
+      <LanguageTabs />
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
