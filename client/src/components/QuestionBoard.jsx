@@ -1,4 +1,12 @@
 import { useState, useEffect } from "react";
+import {
+  FiEye,
+  FiEyeOff,
+  FiMoreHorizontal,
+  FiX,
+  FiTrash2,
+  FiCheck
+} from "react-icons/fi";
 
 export default function QuestionBoard({
   language,
@@ -13,6 +21,7 @@ export default function QuestionBoard({
   onSetEditingQuestionText,
   onSetEditingAnswerText
 }) {
+  const [answersVisible, setAnswersVisible] = useState(true);
   const [questions, setQuestions] = useState({});
 
   // Initialize questions for new languages
@@ -48,7 +57,6 @@ export default function QuestionBoard({
             id: 1,
             question: "What is React?",
             answer: "",
-            show: false,
           },
         ]
       }));
@@ -56,14 +64,6 @@ export default function QuestionBoard({
   }, [languages, questions.React]);
 
 
-  const toggleAnswer = (id) => {
-    setQuestions({
-      ...questions,
-      [language]: (questions[language] || []).map((q) =>
-        q.id === id ? { ...q, show: !q.show } : q
-      ),
-    });
-  };
 
   const deleteQuestion = (id) => {
     setQuestions({
@@ -108,7 +108,6 @@ export default function QuestionBoard({
             id: Date.now(),
             question: editingQuestionText.trim(),
             answer: editingAnswerText,
-            show: false,
           },
         ],
       });
@@ -151,23 +150,25 @@ export default function QuestionBoard({
               Q{index + 1}: {q.question}
             </h3>
 
-            <button
-              onClick={() => openQuestionModalForEdit(q.id)}
-              className="text-gray-600 hover:text-gray-800 p-1 rounded hover:bg-gray-50 transition-colors"
-              title="Question options"
-            >
-              ⋮
-            </button>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setAnswersVisible(!answersVisible)}
+                className="text-gray-600 hover:text-gray-800 p-1 rounded hover:bg-gray-50 transition-colors cursor-pointer"
+                title={answersVisible ? "Hide answers" : "Show answers"}
+              >
+                {answersVisible ? <FiEye /> : <FiEyeOff />}
+              </button>
+              <button
+                onClick={() => openQuestionModalForEdit(q.id)}
+                className="text-gray-600 hover:text-gray-800 p-1 rounded hover:bg-gray-50 transition-colors cursor-pointer"
+                title="Question options"
+              >
+                <FiMoreHorizontal />
+              </button>
+            </div>
           </div>
 
-          <button
-            onClick={() => toggleAnswer(q.id)}
-            className="text-blue-600 font-medium mt-2"
-          >
-            {q.show ? "Hide Answer ▲" : "Show Answer ▼"}
-          </button>
-
-          {q.show && (
+          {answersVisible && (
             <div className="mt-3 p-3 bg-gray-50 rounded-lg border min-h-[60px]">
               {q.answer || <span className="text-gray-400 italic">No answer yet...</span>}
             </div>
@@ -192,8 +193,8 @@ export default function QuestionBoard({
               <h2 className="text-xl font-bold text-gray-800">
                 {selectedQuestionId ? 'Manage Question' : 'Add New Question'}
               </h2>
-              <button onClick={onCloseQuestionModal} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">
-                ×
+              <button onClick={onCloseQuestionModal} className="text-gray-400 hover:text-gray-600 text-2xl leading-none cursor-pointer">
+                <FiX />
               </button>
             </div>
 
@@ -226,16 +227,16 @@ export default function QuestionBoard({
             {/* Modal Footer */}
             <div className={selectedQuestionId ? "flex justify-between p-6 border-t border-gray-200" : "flex justify-end p-6 border-t border-gray-200"}>
               {selectedQuestionId && (
-                <button onClick={deleteQuestionAndAnswer} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors">
-                  🗑️ Delete Question
+                <button onClick={deleteQuestionAndAnswer} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors cursor-pointer">
+                  <FiTrash2 className="inline mr-2" /> Delete Question
                 </button>
               )}
               <div className="flex gap-3">
-                <button onClick={onCloseQuestionModal} className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-medium transition-colors">
+                <button onClick={onCloseQuestionModal} className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-medium transition-colors cursor-pointer">
                   Cancel
                 </button>
-                <button onClick={saveQuestionChanges} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors">
-                  {selectedQuestionId ? '✓ Save Changes' : '✓ Add Question'}
+                <button onClick={saveQuestionChanges} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors cursor-pointer">
+                  {selectedQuestionId ? <><FiCheck className="inline mr-2" /> Save Changes</> : <><FiCheck className="inline mr-2" /> Add Question</>}
                 </button>
               </div>
             </div>

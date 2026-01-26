@@ -1,4 +1,15 @@
 import { useState, useEffect, useRef } from "react";
+import {
+  FiSearch,
+  FiEye,
+  FiEyeOff,
+  FiEdit2,
+  FiTrash2,
+  FiCheck,
+  FiX,
+  FiPlus,
+  FiMoreHorizontal
+} from "react-icons/fi";
 import QuestionBoard from "./QuestionBoard";
 
 function LanguageTabs() {
@@ -153,15 +164,15 @@ function LanguageTabs() {
                   />
                   <button
                     onClick={saveEdit}
-                    className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                    className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 cursor-pointer"
                   >
-                    ✓
+                    <FiCheck />
                   </button>
                   <button
                     onClick={cancelEdit}
-                    className="px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
+                    className="px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600 cursor-pointer"
                   >
-                    ✕
+                    <FiX />
                   </button>
                 </div>
               ) : (
@@ -172,8 +183,8 @@ function LanguageTabs() {
                   }}
                   className={`px-6 py-2 rounded-full font-medium transition ${
                     activeLang === lang
-                      ? "bg-white text-purple-600 shadow"
-                      : "text-gray-600"
+                      ? "bg-white text-purple-600 shadow cursor-pointer"
+                      : "text-gray-600 cursor-pointer"
                   }`}
                 >
                   {lang}
@@ -186,10 +197,10 @@ function LanguageTabs() {
         {/* Add Question Button */}
         <button
           onClick={() => openQuestionModal(null)}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors shadow-md hover:shadow-lg"
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors shadow-md hover:shadow-lg cursor-pointer"
           title="Add new question"
         >
-          ➕ Add Question
+          <FiPlus className="inline mr-2" /> Add Question
         </button>
 
         {/* Search Icon */}
@@ -201,19 +212,19 @@ function LanguageTabs() {
               setSearchTerm(""); // Clear search when hiding
             }
           }}
-          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
           title="Toggle search"
         >
-          🔍
+          <FiSearch />
         </button>
 
         {/* Three-dot Menu */}
         <button
           onClick={openModal}
-          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
           title="Manage languages"
         >
-          ⋮
+          <FiMoreHorizontal />
         </button>
       </div>
 
@@ -243,10 +254,10 @@ function LanguageTabs() {
               <h2 className="text-xl font-bold text-gray-800">Manage Languages</h2>
               <button
                 onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
                 title="Close modal"
               >
-                ×
+                <FiX />
               </button>
             </div>
 
@@ -265,7 +276,7 @@ function LanguageTabs() {
                   />
                   <button
                     onClick={addLanguage}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors cursor-pointer"
                   >
                     Add
                   </button>
@@ -295,14 +306,14 @@ function LanguageTabs() {
                         />
                         <button
                           onClick={saveEdit}
-                          className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                          className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 cursor-pointer"
                           title="Save"
                         >
                           ✓
                         </button>
                         <button
                           onClick={cancelEdit}
-                          className="px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
+                          className="px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600 cursor-pointer"
                           title="Cancel"
                         >
                           ✕
@@ -317,18 +328,18 @@ function LanguageTabs() {
                         <div className="flex gap-1">
                           <button
                             onClick={() => startEditing(lang)}
-                            className="px-3 py-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+                            className="px-3 py-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded text-sm font-medium transition-colors cursor-pointer"
                             title="Edit language"
                           >
-                            Edit
+                            <FiEdit2 className="inline mr-1" /> Edit
                           </button>
                           {languages.length > 1 && (
                             <button
                               onClick={() => deleteLanguage(lang)}
-                              className="px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded text-sm font-medium transition-colors"
+                              className="px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded text-sm font-medium transition-colors cursor-pointer"
                               title="Delete language"
                             >
-                              Delete
+                              <FiTrash2 className="inline mr-1" /> Delete
                             </button>
                           )}
                         </div>
