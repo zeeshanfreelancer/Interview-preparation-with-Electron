@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { FiBold, FiItalic, FiList, FiType } from 'react-icons/fi';
-import { MdFormatListNumbered } from 'react-icons/md';
+import { MdFormatListNumbered, MdColorize } from 'react-icons/md';
 
 export default function RichTextEditor({ value, onChange, placeholder, className = "" }) {
   const editorRef = useRef(null);
@@ -76,6 +76,23 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             <option value="7">Extra Large</option>
           </select>
         </div>
+        <div className="flex items-center gap-1 ml-2">
+          <MdColorize className="text-gray-600" />
+          <select
+            onChange={(e) => execCommand('foreColor', e.target.value)}
+            className="text-sm border border-gray-300 rounded px-2 py-1"
+            defaultValue="#000000"
+          >
+            <option value="#000000">Black</option>
+            <option value="#dc2626">Red</option>
+            <option value="#16a34a">Green</option>
+            <option value="#2563eb">Blue</option>
+            <option value="#ca8a04">Yellow</option>
+            <option value="#9333ea">Purple</option>
+            <option value="#ea580c">Orange</option>
+            <option value="#64748b">Gray</option>
+          </select>
+        </div>
       </div>
       
       {/* Editor */}
@@ -83,7 +100,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         ref={editorRef}
         contentEditable
         onInput={handleInput}
-        className={`p-3 min-h-[120px] focus:outline-none ${className}`}
+        className={`p-3 min-h-[120px] focus:outline-none [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:mb-1 ${className}`}
         style={{ whiteSpace: 'pre-wrap' }}
         suppressContentEditableWarning={true}
         data-placeholder={placeholder}
