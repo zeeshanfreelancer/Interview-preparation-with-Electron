@@ -174,7 +174,7 @@ function LanguageTabs() {
   }, [questionModalOpen]);
 
   return (
-    <div className="max-w-4xl mx-auto py-10">
+    <div className="max-w-6xl mx-auto py-10">
 
       {/* Tabs and Menu */}
       <div className="flex justify-center items-center gap-4">
