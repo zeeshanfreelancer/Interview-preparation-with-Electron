@@ -5,8 +5,10 @@ import {
   FiMoreHorizontal,
   FiX,
   FiTrash2,
-  FiCheck
+  FiCheck,
+  FiPlus
 } from "react-icons/fi";
+import { apiService } from "../services/api";
 
 export default function QuestionBoard({
   language,
@@ -23,45 +25,49 @@ export default function QuestionBoard({
 }) {
   const [answersVisible, setAnswersVisible] = useState(true);
   const [questions, setQuestions] = useState({});
+  const [filteredQuestions, setFilteredQuestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Initialize questions for new languages
+  // Load questions from API when language changes
   useEffect(() => {
-    setQuestions(prevQuestions => {
-      const newQuestions = { ...prevQuestions };
+    const loadQuestions = async () => {
+      if (!language) return;
 
-      // Add any missing languages
-      languages.forEach(lang => {
-        if (!newQuestions[lang]) {
-          newQuestions[lang] = [];
-        }
-      });
+      try {
+        setLoading(true);
+        setError(null);
+        const fetchedQuestions = await apiService.getQuestions(language);
+        setQuestions({ [language]: fetchedQuestions });
+        setFilteredQuestions(fetchedQuestions);
+      } catch (err) {
+        console.error('Failed to load questions:', err);
+        setError('Failed to load questions');
+        setQuestions({ [language]: [] });
+        setFilteredQuestions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      // Remove questions for deleted languages
-      Object.keys(newQuestions).forEach(lang => {
-        if (!languages.includes(lang)) {
-          delete newQuestions[lang];
-        }
-      });
+    loadQuestions();
+  }, [language]);
 
-      return newQuestions;
-    });
-  }, [languages]);
-
-  // Initialize with default question for React on first mount
+  // Filter questions based on search term
   useEffect(() => {
-    if (languages.includes('React') && (!questions.React || questions.React.length === 0)) {
-      setQuestions(prev => ({
-        ...prev,
-        React: [
-          {
-            id: 1,
-            question: "What is React?",
-            answer: "",
-          },
-        ]
-      }));
+    if (!questions[language]) return;
+
+    if (searchTerm.trim()) {
+      const filtered = questions[language].filter(q =>
+        q.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        q.answer.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredQuestions(filtered);
+    } else {
+      setFilteredQuestions(questions[language]);
     }
-  }, [languages, questions.React]);
+  }, [searchTerm, questions, language]);
+
 
 
 
@@ -77,7 +83,7 @@ export default function QuestionBoard({
     onOpenQuestionModal(questionId);
     // Set initial values for editing
     if (questionId) {
-      const question = (questions[language] || []).find(q => q.id === questionId);
+      const question = (questions[language] || []).find(q => (q._id || q.id) === questionId);
       if (question) {
         onSetEditingQuestionText(question.question);
         onSetEditingAnswerText(question.answer);
@@ -85,50 +91,74 @@ export default function QuestionBoard({
     }
   };
 
-  const saveQuestionChanges = () => {
+  const saveQuestionChanges = async () => {
     if (!editingQuestionText.trim()) return;
 
-    if (selectedQuestionId) {
-      // Update existing question
-      setQuestions({
-        ...questions,
-        [language]: (questions[language] || []).map((q) =>
-          q.id === selectedQuestionId
-            ? { ...q, question: editingQuestionText.trim(), answer: editingAnswerText }
-            : q
-        ),
-      });
-    } else {
-      // Add new question
-      setQuestions({
-        ...questions,
-        [language]: [
-          ...(questions[language] || []),
-          {
-            id: Date.now(),
-            question: editingQuestionText.trim(),
-            answer: editingAnswerText,
-          },
-        ],
-      });
+    try {
+      if (selectedQuestionId) {
+        // Update existing question
+        await apiService.updateQuestion(selectedQuestionId, {
+          question: editingQuestionText.trim(),
+          answer: editingAnswerText
+        });
+      } else {
+        // Add new question
+        await apiService.createQuestion({
+          language,
+          question: editingQuestionText.trim(),
+          answer: editingAnswerText
+        });
+      }
+
+      // Reload questions after save
+      const updatedQuestions = await apiService.getQuestions(language);
+      setQuestions({ [language]: updatedQuestions });
+      setFilteredQuestions(updatedQuestions);
+
+      onCloseQuestionModal();
+    } catch (err) {
+      console.error('Failed to save question:', err);
+      setError('Failed to save question');
     }
-
-    onCloseQuestionModal();
   };
 
-  const deleteQuestionAndAnswer = () => {
-    setQuestions({
-      ...questions,
-      [language]: (questions[language] || []).filter((q) => q.id !== selectedQuestionId),
-    });
+  const deleteQuestionAndAnswer = async () => {
+    try {
+      await apiService.deleteQuestion(selectedQuestionId);
 
-    onCloseQuestionModal();
+      // Reload questions after delete
+      const updatedQuestions = await apiService.getQuestions(language);
+      setQuestions({ [language]: updatedQuestions });
+      setFilteredQuestions(updatedQuestions);
+
+      onCloseQuestionModal();
+    } catch (err) {
+      console.error('Failed to delete question:', err);
+      setError('Failed to delete question');
+    }
   };
 
-  const filteredQuestions = (questions[language] || []).filter((q) =>
-    q.question.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
+
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6 m-7">
+        <div className="flex justify-center items-center py-12">
+          <div className="text-gray-500">Loading questions...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6 m-7">
+        <div className="flex justify-center items-center py-12">
+          <div className="text-red-500">{error}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6 m-7">
@@ -142,7 +172,7 @@ export default function QuestionBoard({
       {/* Questions List */}
       {filteredQuestions.map((q, index) => (
         <div
-          key={q.id}
+          key={q._id || q.id}
           className="border rounded-xl p-4 mb-4 hover:shadow-md transition"
         >
           <div className="flex justify-between items-start">
@@ -159,7 +189,7 @@ export default function QuestionBoard({
                 {answersVisible ? <FiEye /> : <FiEyeOff />}
               </button>
               <button
-                onClick={() => openQuestionModalForEdit(q.id)}
+                onClick={() => openQuestionModalForEdit(q._id || q.id)}
                 className="text-gray-600 hover:text-gray-800 p-1 rounded hover:bg-gray-50 transition-colors cursor-pointer"
                 title="Question options"
               >
@@ -178,7 +208,7 @@ export default function QuestionBoard({
 
 
 
-      {filteredQuestions.length === 0 && searchTerm && (
+      {filteredQuestions.length === 0 && searchTerm && (questions[language] || []).length > 0 && (
   <p className="text-center text-gray-500 mt-6">
     No questions found
   </p>

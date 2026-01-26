@@ -11,10 +11,11 @@ import {
   FiMoreHorizontal
 } from "react-icons/fi";
 import QuestionBoard from "./QuestionBoard";
+import { apiService } from "../services/api";
 
 function LanguageTabs() {
-  const [languages, setLanguages] = useState(["React", "HTML", "CSS", "JavaScript"]);
-  const [activeLang, setActiveLang] = useState("React");
+  const [languages, setLanguages] = useState([]);
+  const [activeLang, setActiveLang] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchVisible, setSearchVisible] = useState(false);
   const [newLanguage, setNewLanguage] = useState("");
@@ -25,7 +26,35 @@ function LanguageTabs() {
   const [selectedQuestionId, setSelectedQuestionId] = useState(null);
   const [editingQuestionText, setEditingQuestionText] = useState("");
   const [editingAnswerText, setEditingAnswerText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const modalRef = useRef(null);
+
+  // Load languages from API
+  useEffect(() => {
+    const loadLanguages = async () => {
+      try {
+        setLoading(true);
+        const fetchedLanguages = await apiService.getLanguages();
+        // Ensure we have at least React as default
+        const defaultLanguages = fetchedLanguages.length > 0 ? fetchedLanguages : ['React'];
+        setLanguages(defaultLanguages);
+        setActiveLang(defaultLanguages[0]);
+        setError(null);
+      } catch (err) {
+        console.error('Failed to load languages:', err);
+        // Fallback to default languages if API fails
+        const defaultLanguages = ['React', 'HTML', 'CSS', 'JavaScript'];
+        setLanguages(defaultLanguages);
+        setActiveLang(defaultLanguages[0]);
+        setError('Failed to load languages from server');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadLanguages();
+  }, []);
 
   const addLanguage = () => {
     if (!newLanguage.trim() || languages.includes(newLanguage.trim())) return;
@@ -79,7 +108,7 @@ function LanguageTabs() {
     setEditingValue("");
   };
 
-  const openQuestionModal = (questionId) => {
+  const openQuestionModal = (questionId, mode = 'add') => {
     setSelectedQuestionId(questionId);
     setQuestionModalOpen(true);
 
