@@ -9,6 +9,7 @@ import {
   FiPlus
 } from "react-icons/fi";
 import { apiService } from "../services/api";
+import RichTextEditor from "./RichTextEditor";
 
 export default function QuestionBoard({
   language,
@@ -177,7 +178,12 @@ export default function QuestionBoard({
         >
           <div className="flex justify-between items-start">
             <h3 className="text-lg font-semibold flex-1">
-              Q{index + 1}: {q.question}
+              Q{index + 1}: 
+              <span 
+                dangerouslySetInnerHTML={{ __html: q.question }}
+                style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
+                className="[&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:mb-1 inline"
+              />
             </h3>
 
             <div className="flex gap-1">
@@ -203,7 +209,18 @@ export default function QuestionBoard({
 
           {(answersVisible[q._id || q.id] ?? true) && (
             <div className="mt-3 p-3 bg-gray-50 rounded-lg border min-h-[60px]">
-              {q.answer || <span className="text-gray-400 italic">No answer yet...</span>}
+              {q.answer ? (
+                <div 
+                  dangerouslySetInnerHTML={{ __html: q.answer }} 
+                  style={{ 
+                    whiteSpace: 'pre-wrap', 
+                    wordWrap: 'break-word'
+                  }}
+                  className="[&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:mb-1"
+                />
+              ) : (
+                <span className="text-gray-400 italic">No answer yet...</span>
+              )}
             </div>
           )}
         </div>
@@ -236,23 +253,22 @@ export default function QuestionBoard({
               {/* Question Input */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Question</label>
-                <input
-                  type="text"
+                <RichTextEditor
                   value={editingQuestionText}
-                  onChange={(e) => onSetEditingQuestionText(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                  onChange={onSetEditingQuestionText}
                   placeholder="Enter your question..."
+                  className="min-h-[80px]"
                 />
               </div>
 
               {/* Answer Input */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Answer</label>
-                <textarea
+                <RichTextEditor
                   value={editingAnswerText}
-                  onChange={(e) => onSetEditingAnswerText(e.target.value)}
-                  className="w-full min-h-[120px] px-4 py-3 border border-gray-300 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                  onChange={onSetEditingAnswerText}
                   placeholder="Write your answer..."
+                  className="min-h-[120px]"
                 />
               </div>
             </div>
