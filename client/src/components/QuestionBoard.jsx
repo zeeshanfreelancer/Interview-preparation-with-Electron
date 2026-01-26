@@ -23,12 +23,12 @@ export default function QuestionBoard({
   onCloseQuestionModal,
   onSetEditingQuestionText,
   onSetEditingAnswerText,
-  onQuestionsUpdate
+  onQuestionsUpdate,
+  loading
 }) {
   const [answersVisible, setAnswersVisible] = useState({});
   const [questions, setQuestions] = useState({});
   const [filteredQuestions, setFilteredQuestions] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalQuestion, setOriginalQuestion] = useState('');
@@ -40,7 +40,6 @@ export default function QuestionBoard({
       if (!language) return;
 
       try {
-        setLoading(true);
         setError(null);
         const fetchedQuestions = await apiService.getQuestions(language);
         setQuestions({ [language]: fetchedQuestions });
@@ -51,8 +50,6 @@ export default function QuestionBoard({
         setError('Failed to load questions');
         setQuestions({ [language]: [] });
         setFilteredQuestions([]);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -171,9 +168,10 @@ export default function QuestionBoard({
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6 m-7">
+      <div className="w-full bg-white rounded-2xl shadow-lg p-6 m-7">
         <div className="flex justify-center items-center py-12">
-          <div className="text-gray-500">Loading questions...</div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+          <div className="ml-3 text-gray-500">Loading questions...</div>
         </div>
       </div>
     );

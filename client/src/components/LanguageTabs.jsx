@@ -45,12 +45,21 @@ function LanguageTabs() {
     const loadLanguages = async () => {
       try {
         setLoading(true);
+        const startTime = Date.now();
         const fetchedLanguages = await apiService.getLanguages();
         // Ensure we have at least React as default
         const defaultLanguages = fetchedLanguages.length > 0 ? fetchedLanguages : ['React'];
         setLanguages(defaultLanguages);
         setActiveLang(defaultLanguages[0]);
         setError(null);
+        
+        // Ensure loader shows for at least 2 seconds
+        const elapsedTime = Date.now() - startTime;
+        const remainingTime = Math.max(0, 2000 - elapsedTime);
+        
+        setTimeout(() => {
+          setLoading(false);
+        }, remainingTime);
       } catch (err) {
         console.error('Failed to load languages:', err);
         // Fallback to default languages if API fails
@@ -58,8 +67,9 @@ function LanguageTabs() {
         setLanguages(defaultLanguages);
         setActiveLang(defaultLanguages[0]);
         setError('Failed to load languages from server');
-      } finally {
-        setLoading(false);
+        setTimeout(() => {
+          setLoading(false);
+        }, 2000);
       }
     };
 
@@ -71,11 +81,24 @@ function LanguageTabs() {
     const loadQuestions = async () => {
       if (!activeLang) return;
       try {
+        setLoading(true);
+        const startTime = Date.now();
         const fetchedQuestions = await apiService.getQuestions(activeLang);
         setQuestions(fetchedQuestions);
+        
+        // Ensure loader shows for at least 2 seconds
+        const elapsedTime = Date.now() - startTime;
+        const remainingTime = Math.max(0, 2000 - elapsedTime);
+        
+        setTimeout(() => {
+          setLoading(false);
+        }, remainingTime);
       } catch (err) {
         console.error('Failed to load questions:', err);
         setQuestions([]);
+        setTimeout(() => {
+          setLoading(false);
+        }, 2000);
       }
     };
 
@@ -619,6 +642,7 @@ function LanguageTabs() {
           onSetEditingQuestionText={setEditingQuestionText}
           onSetEditingAnswerText={setEditingAnswerText}
           onQuestionsUpdate={setQuestions}
+          loading={loading}
         />
       </div>
     </div>
