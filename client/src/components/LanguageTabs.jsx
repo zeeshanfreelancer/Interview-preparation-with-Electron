@@ -38,6 +38,7 @@ function LanguageTabs() {
   const [allLanguagesQuestions, setAllLanguagesQuestions] = useState({});
   const modalRef = useRef(null);
   const fileInputRef = useRef(null);
+  const exportMenuRef = useRef(null);
 
   // Load languages from API
   useEffect(() => {
@@ -266,6 +267,21 @@ function LanguageTabs() {
     setEditingValue("");
   };
 
+  // Close export menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+        setExportMenuOpen(false);
+        setExportOptionsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // Close modal when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -304,7 +320,7 @@ function LanguageTabs() {
     <div className="max-w-6xl mx-auto">
 
       {/* Tabs and Menu */}
-      <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 py-4">
+      <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 py-2">
         <div className="max-w-6xl mx-auto flex justify-center items-center gap-4 px-4">
         <div className="bg-purple-100 p-2 rounded-full flex gap-2 flex-wrap">
           {languages.map((lang) => (
@@ -361,7 +377,7 @@ function LanguageTabs() {
         </button>
 
         {/* Export Button */}
-        <div className="relative">
+        <div className="relative" ref={exportMenuRef}>
           <button
             onClick={() => setExportMenuOpen(!exportMenuOpen)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-md hover:shadow-lg cursor-pointer"
@@ -393,24 +409,24 @@ function LanguageTabs() {
           )}
           {exportOptionsOpen && (
             <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[180px]">
-              <div className="p-2 border-b border-gray-200">
-                <div className="text-sm font-medium text-gray-700 mb-2">Export Scope:</div>
+              <div className="p-1 border-b border-gray-200">
+                
                 <button
                   onClick={() => executeExport('current', selectedExportFormat)}
-                  className="w-full px-3 py-2 text-left hover:bg-gray-50 rounded text-sm cursor-pointer"
+                  className="w-full px-1 py-2 text-center hover:bg-gray-50 rounded text-sm cursor-pointer"
                 >
-                  Current Language ({activeLang})
+                  Current Language
                 </button>
                 <button
                   onClick={() => executeExport('all', selectedExportFormat)}
-                  className="w-full px-3 py-2 text-left hover:bg-gray-50 rounded text-sm cursor-pointer"
+                  className="w-full px-1 py-2 text-center hover:bg-gray-50 rounded text-sm cursor-pointer"
                 >
                   All Languages
                 </button>
               </div>
               <button
                 onClick={() => setExportOptionsOpen(false)}
-                className="w-full px-3 py-2 text-left hover:bg-gray-50 rounded-b-lg text-sm text-gray-500 cursor-pointer"
+                className="w-full px-1 py-2 text-center hover:bg-gray-50 rounded-b-lg text-sm text-gray-500 cursor-pointer"
               >
                 Cancel
               </button>
@@ -443,10 +459,10 @@ function LanguageTabs() {
               setSearchTerm(""); // Clear search when hiding
             }
           }}
-          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+          className="p-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
           title="Toggle search"
         >
-          <FiSearch />
+          <FiSearch size={20} />
         </button>
 
         {/* Three-dot Menu */}
@@ -461,7 +477,7 @@ function LanguageTabs() {
       </div>
 
       {/* Content with top padding */}
-      <div className="pt-24">
+      <div className="pt-16">
 
       {/* 🔍 Search Box */}
       {searchVisible && (
