@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, Menu } = require("electron");
 const path = require("path");
 
 function createWindow() {
@@ -9,6 +9,9 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js")
     }
   });
+
+  // Remove menu bar
+  Menu.setApplicationMenu(null);
 
   // DEV mode
   win.loadURL("http://localhost:5173");
