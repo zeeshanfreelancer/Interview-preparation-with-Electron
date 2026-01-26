@@ -84,6 +84,19 @@ export const apiService = {
     }
   },
 
+  async deleteLanguage(language) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/questions/language/${language}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete language');
+      return await response.json();
+    } catch (error) {
+      console.error('Error deleting language:', error);
+      throw error;
+    }
+  },
+
   // Health check
   async healthCheck() {
     try {

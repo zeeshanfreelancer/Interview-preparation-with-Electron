@@ -22,7 +22,8 @@ export default function QuestionBoard({
   onOpenQuestionModal,
   onCloseQuestionModal,
   onSetEditingQuestionText,
-  onSetEditingAnswerText
+  onSetEditingAnswerText,
+  onQuestionsUpdate
 }) {
   const [answersVisible, setAnswersVisible] = useState({});
   const [questions, setQuestions] = useState({});
@@ -44,6 +45,7 @@ export default function QuestionBoard({
         const fetchedQuestions = await apiService.getQuestions(language);
         setQuestions({ [language]: fetchedQuestions });
         setFilteredQuestions(fetchedQuestions);
+        onQuestionsUpdate?.(fetchedQuestions);
       } catch (err) {
         console.error('Failed to load questions:', err);
         setError('Failed to load questions');
@@ -134,6 +136,7 @@ export default function QuestionBoard({
       const updatedQuestions = await apiService.getQuestions(language);
       setQuestions({ [language]: updatedQuestions });
       setFilteredQuestions(updatedQuestions);
+      onQuestionsUpdate?.(updatedQuestions);
 
       // Update original values after successful save
       setOriginalQuestion(editingQuestionText.trim());
@@ -155,6 +158,7 @@ export default function QuestionBoard({
       const updatedQuestions = await apiService.getQuestions(language);
       setQuestions({ [language]: updatedQuestions });
       setFilteredQuestions(updatedQuestions);
+      onQuestionsUpdate?.(updatedQuestions);
 
       onCloseQuestionModal();
     } catch (err) {

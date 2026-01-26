@@ -111,4 +111,19 @@ router.get('/search/:language', async (req, res) => {
   }
 });
 
+// Delete all questions for a language (effectively deleting the language)
+router.delete('/language/:language', async (req, res) => {
+  try {
+    const { language } = req.params;
+    const result = await Question.deleteMany({ language });
+    
+    res.json({ 
+      message: `Language '${language}' deleted successfully`, 
+      deletedCount: result.deletedCount 
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;

@@ -8,10 +8,13 @@ import {
   FiCheck,
   FiX,
   FiPlus,
-  FiMoreHorizontal
+  FiMoreHorizontal,
+  FiDownload,
+  FiUpload
 } from "react-icons/fi";
 import QuestionBoard from "./QuestionBoard";
 import { apiService } from "../services/api";
+import { exportToPDF, exportToWord, exportToJSON, importFromJSON } from "../utils/exportImport";
 
 function LanguageTabs() {
   const [languages, setLanguages] = useState([]);
@@ -28,7 +31,13 @@ function LanguageTabs() {
   const [editingAnswerText, setEditingAnswerText] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exportOptionsOpen, setExportOptionsOpen] = useState(false);
+  const [selectedExportFormat, setSelectedExportFormat] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [allLanguagesQuestions, setAllLanguagesQuestions] = useState({});
   const modalRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Load languages from API
   useEffect(() => {
@@ -56,6 +65,22 @@ function LanguageTabs() {
     loadLanguages();
   }, []);
 
+  // Load questions when language changes
+  useEffect(() => {
+    const loadQuestions = async () => {
+      if (!activeLang) return;
+      try {
+        const fetchedQuestions = await apiService.getQuestions(activeLang);
+        setQuestions(fetchedQuestions);
+      } catch (err) {
+        console.error('Failed to load questions:', err);
+        setQuestions([]);
+      }
+    };
+
+    loadQuestions();
+  }, [activeLang]);
+
   const addLanguage = () => {
     if (!newLanguage.trim() || languages.includes(newLanguage.trim())) return;
 
@@ -63,18 +88,25 @@ function LanguageTabs() {
     setNewLanguage("");
   };
 
-  const deleteLanguage = (langToDelete) => {
+  const deleteLanguage = async (langToDelete) => {
     if (languages.length <= 1) return; // Keep at least one language
 
-    const newLanguages = languages.filter(lang => lang !== langToDelete);
-    setLanguages(newLanguages);
+    try {
+      await apiService.deleteLanguage(langToDelete);
+      
+      const newLanguages = languages.filter(lang => lang !== langToDelete);
+      setLanguages(newLanguages);
 
-    // If deleting active language, switch to first remaining language
-    if (activeLang === langToDelete) {
-      setActiveLang(newLanguages[0]);
+      // If deleting active language, switch to first remaining language
+      if (activeLang === langToDelete) {
+        setActiveLang(newLanguages[0]);
+      }
+
+      setSearchTerm(""); // Clear search when switching languages
+    } catch (error) {
+      console.error('Failed to delete language:', error);
+      alert('Failed to delete language');
     }
-
-    setSearchTerm(""); // Clear search when switching languages
   };
 
   const startEditing = (lang) => {
@@ -129,6 +161,101 @@ function LanguageTabs() {
     setEditingAnswerText("");
   };
 
+  const handleExport = (format) => {
+    if (questions.length === 0) {
+      alert('No questions to export');
+      return;
+    }
+    setSelectedExportFormat(format);
+    setExportMenuOpen(false);
+    setExportOptionsOpen(true);
+  };
+
+  const executeExport = async (scope, format) => {
+    let questionsToExport = [];
+    let exportName = '';
+
+    if (scope === 'current') {
+      questionsToExport = questions;
+      exportName = activeLang;
+    } else {
+      // Load all questions for all languages
+      const allQuestions = {};
+      for (const lang of languages) {
+        try {
+          const langQuestions = await apiService.getQuestions(lang);
+          if (langQuestions.length > 0) {
+            allQuestions[lang] = langQuestions;
+          }
+        } catch (err) {
+          console.error(`Failed to load questions for ${lang}:`, err);
+        }
+      }
+      
+      // Flatten all questions
+      questionsToExport = Object.entries(allQuestions).flatMap(([lang, qs]) => 
+        qs.map(q => ({ ...q, language: lang }))
+      );
+      exportName = 'All_Languages';
+    }
+
+    if (questionsToExport.length === 0) {
+      alert('No questions to export');
+      setExportOptionsOpen(false);
+      return;
+    }
+
+    switch (format) {
+      case 'pdf':
+        exportToPDF(questionsToExport, exportName, scope === 'all');
+        break;
+      case 'word':
+        exportToWord(questionsToExport, exportName, scope === 'all');
+        break;
+      case 'json':
+        if (scope === 'all') {
+          exportToJSON(allQuestions, exportName, true);
+        } else {
+          exportToJSON(questionsToExport, exportName);
+        }
+        break;
+    }
+    setExportOptionsOpen(false);
+  };
+
+  const handleImport = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const data = await importFromJSON(file);
+      
+      // Import questions to current language
+      for (const q of data.questions) {
+        await apiService.createQuestion({
+          language: activeLang,
+          question: q.question,
+          answer: q.answer
+        });
+      }
+      
+      // Reload questions
+      const updatedQuestions = await apiService.getQuestions(activeLang);
+      setQuestions(updatedQuestions);
+      
+      alert(`Successfully imported ${data.questions.length} questions`);
+    } catch (error) {
+      alert(`Import failed: ${error.message}`);
+    }
+    
+    // Reset file input
+    event.target.value = '';
+  };
+
   const openModal = () => {
     setModalOpen(true);
   };
@@ -174,10 +301,11 @@ function LanguageTabs() {
   }, [questionModalOpen]);
 
   return (
-    <div className="max-w-6xl mx-auto py-10">
+    <div className="max-w-6xl mx-auto">
 
       {/* Tabs and Menu */}
-      <div className="flex justify-center items-center gap-4">
+      <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 py-4">
+        <div className="max-w-6xl mx-auto flex justify-center items-center gap-4 px-4">
         <div className="bg-purple-100 p-2 rounded-full flex gap-2 flex-wrap">
           {languages.map((lang) => (
             <div key={lang} className="flex items-center">
@@ -232,6 +360,80 @@ function LanguageTabs() {
           <FiPlus className="inline mr-2" /> Add Question
         </button>
 
+        {/* Export Button */}
+        <div className="relative">
+          <button
+            onClick={() => setExportMenuOpen(!exportMenuOpen)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-md hover:shadow-lg cursor-pointer"
+            title="Export questions"
+          >
+            <FiDownload className="inline mr-2" /> Export
+          </button>
+          {exportMenuOpen && (
+            <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+              <button
+                onClick={() => handleExport('pdf')}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 rounded-t-lg cursor-pointer"
+              >
+                PDF
+              </button>
+              <button
+                onClick={() => handleExport('word')}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 cursor-pointer"
+              >
+                Word
+              </button>
+              <button
+                onClick={() => handleExport('json')}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 rounded-b-lg cursor-pointer"
+              >
+                JSON
+              </button>
+            </div>
+          )}
+          {exportOptionsOpen && (
+            <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[180px]">
+              <div className="p-2 border-b border-gray-200">
+                <div className="text-sm font-medium text-gray-700 mb-2">Export Scope:</div>
+                <button
+                  onClick={() => executeExport('current', selectedExportFormat)}
+                  className="w-full px-3 py-2 text-left hover:bg-gray-50 rounded text-sm cursor-pointer"
+                >
+                  Current Language ({activeLang})
+                </button>
+                <button
+                  onClick={() => executeExport('all', selectedExportFormat)}
+                  className="w-full px-3 py-2 text-left hover:bg-gray-50 rounded text-sm cursor-pointer"
+                >
+                  All Languages
+                </button>
+              </div>
+              <button
+                onClick={() => setExportOptionsOpen(false)}
+                className="w-full px-3 py-2 text-left hover:bg-gray-50 rounded-b-lg text-sm text-gray-500 cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Import Button */}
+        <button
+          onClick={handleImport}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors shadow-md hover:shadow-lg cursor-pointer"
+          title="Import questions from JSON"
+        >
+          <FiUpload className="inline mr-2" /> Import
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleFileImport}
+          className="hidden"
+        />
+
         {/* Search Icon */}
         <button
           onClick={() => {
@@ -255,7 +457,11 @@ function LanguageTabs() {
         >
           <FiMoreHorizontal />
         </button>
+        </div>
       </div>
+
+      {/* Content with top padding */}
+      <div className="pt-24">
 
       {/* 🔍 Search Box */}
       {searchVisible && (
@@ -383,20 +589,22 @@ function LanguageTabs() {
         </div>
       )}
 
-      {/* Question Board */}
-      <QuestionBoard
-        language={activeLang}
-        searchTerm={searchTerm}
-        languages={languages}
-        questionModalOpen={questionModalOpen}
-        selectedQuestionId={selectedQuestionId}
-        editingQuestionText={editingQuestionText}
-        editingAnswerText={editingAnswerText}
-        onOpenQuestionModal={openQuestionModal}
-        onCloseQuestionModal={closeQuestionModal}
-        onSetEditingQuestionText={setEditingQuestionText}
-        onSetEditingAnswerText={setEditingAnswerText}
-      />
+        {/* Question Board */}
+        <QuestionBoard
+          language={activeLang}
+          searchTerm={searchTerm}
+          languages={languages}
+          questionModalOpen={questionModalOpen}
+          selectedQuestionId={selectedQuestionId}
+          editingQuestionText={editingQuestionText}
+          editingAnswerText={editingAnswerText}
+          onOpenQuestionModal={openQuestionModal}
+          onCloseQuestionModal={closeQuestionModal}
+          onSetEditingQuestionText={setEditingQuestionText}
+          onSetEditingAnswerText={setEditingAnswerText}
+          onQuestionsUpdate={setQuestions}
+        />
+      </div>
     </div>
   );
 }
