@@ -23,7 +23,7 @@ export default function QuestionBoard({
   onSetEditingQuestionText,
   onSetEditingAnswerText
 }) {
-  const [answersVisible, setAnswersVisible] = useState(true);
+  const [answersVisible, setAnswersVisible] = useState({});
   const [questions, setQuestions] = useState({});
   const [filteredQuestions, setFilteredQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -161,7 +161,7 @@ export default function QuestionBoard({
   }
 
   return (
-    <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6 m-7">
+    <div className="w-full bg-white rounded-2xl shadow-lg p-6 m-7">
 
       {(questions[language] || []).length === 0 && (
         <p className="text-gray-500 text-center mb-4">
@@ -182,11 +182,14 @@ export default function QuestionBoard({
 
             <div className="flex gap-1">
               <button
-                onClick={() => setAnswersVisible(!answersVisible)}
+                onClick={() => setAnswersVisible(prev => ({
+                  ...prev,
+                  [q._id || q.id]: prev[q._id || q.id] === undefined ? false : !prev[q._id || q.id]
+                }))}
                 className="text-gray-600 hover:text-gray-800 p-1 rounded hover:bg-gray-50 transition-colors cursor-pointer"
-                title={answersVisible ? "Hide answers" : "Show answers"}
+                title={(answersVisible[q._id || q.id] ?? true) ? "Hide answers" : "Show answers"}
               >
-                {answersVisible ? <FiEye /> : <FiEyeOff />}
+                {(answersVisible[q._id || q.id] ?? true) ? <FiEye /> : <FiEyeOff />}
               </button>
               <button
                 onClick={() => openQuestionModalForEdit(q._id || q.id)}
@@ -198,7 +201,7 @@ export default function QuestionBoard({
             </div>
           </div>
 
-          {answersVisible && (
+          {(answersVisible[q._id || q.id] ?? true) && (
             <div className="mt-3 p-3 bg-gray-50 rounded-lg border min-h-[60px]">
               {q.answer || <span className="text-gray-400 italic">No answer yet...</span>}
             </div>
@@ -217,7 +220,7 @@ export default function QuestionBoard({
       {/* Question Management Modal */}
       {questionModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={onCloseQuestionModal}>
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h2 className="text-xl font-bold text-gray-800">
