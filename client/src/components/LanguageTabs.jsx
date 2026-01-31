@@ -16,6 +16,9 @@ import QuestionBoard from "./QuestionBoard";
 import { apiService } from "../services/api";
 import { exportToPDF, exportToWord, exportToJSON, importFromJSON } from "../utils/exportImport";
 
+// Default languages configuration
+const DEFAULT_LANGUAGES = ['React', 'JavaScript', 'HTML', 'CSS'];
+
 function LanguageTabs() {
   const [languages, setLanguages] = useState([]);
   const [activeLang, setActiveLang] = useState("");
@@ -42,13 +45,16 @@ function LanguageTabs() {
 
   // Load languages from API
   useEffect(() => {
+    let timeoutId1 = null;
+    let timeoutId2 = null;
+    
     const loadLanguages = async () => {
       try {
         setLoading(true);
         const startTime = Date.now();
         const fetchedLanguages = await apiService.getLanguages();
-        // Ensure we have at least React as default
-        const defaultLanguages = fetchedLanguages.length > 0 ? fetchedLanguages : ['React'];
+        // Ensure we have at least one default language
+        const defaultLanguages = fetchedLanguages.length > 0 ? fetchedLanguages : DEFAULT_LANGUAGES;
         setLanguages(defaultLanguages);
         setActiveLang(defaultLanguages[0]);
         setError(null);
@@ -57,53 +63,32 @@ function LanguageTabs() {
         const elapsedTime = Date.now() - startTime;
         const remainingTime = Math.max(0, 2000 - elapsedTime);
         
-        setTimeout(() => {
+        timeoutId1 = setTimeout(() => {
           setLoading(false);
         }, remainingTime);
       } catch (err) {
-        console.error('Failed to load languages:', err);
+        // Logging removed in production
         // Fallback to default languages if API fails
-        const defaultLanguages = ['React', 'HTML', 'CSS', 'JavaScript'];
-        setLanguages(defaultLanguages);
-        setActiveLang(defaultLanguages[0]);
+        setLanguages(DEFAULT_LANGUAGES);
+        setActiveLang(DEFAULT_LANGUAGES[0]);
         setError('Failed to load languages from server');
-        setTimeout(() => {
+        timeoutId2 = setTimeout(() => {
           setLoading(false);
         }, 2000);
       }
     };
 
     loadLanguages();
+    
+    // Cleanup timeouts on unmount
+    return () => {
+      if (timeoutId1) clearTimeout(timeoutId1);
+      if (timeoutId2) clearTimeout(timeoutId2);
+    };
   }, []);
 
-  // Load questions when language changes
-  useEffect(() => {
-    const loadQuestions = async () => {
-      if (!activeLang) return;
-      try {
-        setLoading(true);
-        const startTime = Date.now();
-        const fetchedQuestions = await apiService.getQuestions(activeLang);
-        setQuestions(fetchedQuestions);
-        
-        // Ensure loader shows for at least 2 seconds
-        const elapsedTime = Date.now() - startTime;
-        const remainingTime = Math.max(0, 2000 - elapsedTime);
-        
-        setTimeout(() => {
-          setLoading(false);
-        }, remainingTime);
-      } catch (err) {
-        console.error('Failed to load questions:', err);
-        setQuestions([]);
-        setTimeout(() => {
-          setLoading(false);
-        }, 2000);
-      }
-    };
-
-    loadQuestions();
-  }, [activeLang]);
+  // Note: Question loading is handled by QuestionBoard component
+  // This useEffect was removed to avoid conflicts - QuestionBoard handles all question loading
 
   const addLanguage = () => {
     if (!newLanguage.trim() || languages.includes(newLanguage.trim())) return;
@@ -642,7 +627,7 @@ function LanguageTabs() {
           onSetEditingQuestionText={setEditingQuestionText}
           onSetEditingAnswerText={setEditingAnswerText}
           onQuestionsUpdate={setQuestions}
-          loading={loading}
+          loading={false}
         />
       </div>
     </div>

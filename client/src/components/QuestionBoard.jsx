@@ -30,6 +30,7 @@ export default function QuestionBoard({
   const [questions, setQuestions] = useState({});
   const [filteredQuestions, setFilteredQuestions] = useState([]);
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalQuestion, setOriginalQuestion] = useState('');
   const [originalAnswer, setOriginalAnswer] = useState('');
@@ -37,19 +38,44 @@ export default function QuestionBoard({
   // Load questions from API when language changes
   useEffect(() => {
     const loadQuestions = async () => {
-      if (!language) return;
+      if (!language) {
+        setFilteredQuestions([]);
+        setQuestions({});
+        return;
+      }
 
+      // Clear previous questions immediately when language changes
+      setFilteredQuestions([]);
+      setError(null);
+      setIsLoading(true);
+      
       try {
-        setError(null);
+        // Logging removed in production to prevent performance issues
+        
         const fetchedQuestions = await apiService.getQuestions(language);
+        // Logging removed in production
+        
+        if (!Array.isArray(fetchedQuestions)) {
+          // Logging removed in production
+          setQuestions({ [language]: [] });
+          setFilteredQuestions([]);
+          onQuestionsUpdate?.([]);
+          setIsLoading(false);
+          return;
+        }
+        
         setQuestions({ [language]: fetchedQuestions });
         setFilteredQuestions(fetchedQuestions);
         onQuestionsUpdate?.(fetchedQuestions);
+        setIsLoading(false);
       } catch (err) {
-        console.error('Failed to load questions:', err);
-        setError('Failed to load questions');
+        // Logging removed in production
+        const errorMessage = `Failed to load questions: ${err?.message || 'Unknown error'}`;
+        setError(errorMessage);
         setQuestions({ [language]: [] });
         setFilteredQuestions([]);
+        onQuestionsUpdate?.([]);
+        setIsLoading(false);
       }
     };
 
@@ -111,9 +137,14 @@ export default function QuestionBoard({
   };
 
   const saveQuestionChanges = async () => {
-    if (!editingQuestionText.trim()) return;
+    if (!editingQuestionText.trim()) {
+      setError('Question text cannot be empty');
+      return;
+    }
 
     try {
+      setError(null); // Clear any previous errors
+      
       if (selectedQuestionId) {
         // Update existing question
         await apiService.updateQuestion(selectedQuestionId, {
@@ -131,19 +162,25 @@ export default function QuestionBoard({
 
       // Reload questions after save
       const updatedQuestions = await apiService.getQuestions(language);
-      setQuestions({ [language]: updatedQuestions });
-      setFilteredQuestions(updatedQuestions);
-      onQuestionsUpdate?.(updatedQuestions);
+      
+      setQuestions({ [language]: updatedQuestions || [] });
+      setFilteredQuestions(updatedQuestions || []);
+      onQuestionsUpdate?.(updatedQuestions || []);
 
       // Update original values after successful save
       setOriginalQuestion(editingQuestionText.trim());
       setOriginalAnswer(editingAnswerText);
       setHasUnsavedChanges(false);
 
+      // Show success message
+      alert(selectedQuestionId ? 'Question updated successfully!' : 'Question added successfully!');
+      
       onCloseQuestionModal();
     } catch (err) {
-      console.error('Failed to save question:', err);
-      setError('Failed to save question');
+      // Logging removed in production
+      const errorMessage = err?.message || 'Failed to save question. Please check your connection and try again.';
+      setError(errorMessage);
+      alert(`Error: ${errorMessage}`);
     }
   };
 
@@ -166,12 +203,12 @@ export default function QuestionBoard({
 
 
 
-  if (loading) {
+  if (isLoading || loading) {
     return (
       <div className="w-full bg-white rounded-2xl shadow-lg p-6 m-7">
         <div className="flex justify-center items-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-          <div className="ml-3 text-gray-500">Loading questions...</div>
+          <div className="ml-3 text-gray-500">Loading questions for {language}...</div>
         </div>
       </div>
     );
@@ -180,8 +217,29 @@ export default function QuestionBoard({
   if (error) {
     return (
       <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6 m-7">
-        <div className="flex justify-center items-center py-12">
-          <div className="text-red-500">{error}</div>
+        <div className="flex flex-col justify-center items-center py-12">
+          <div className="text-red-500 font-semibold mb-2">Error</div>
+          <div className="text-red-600 text-center">{error}</div>
+          <button
+            onClick={() => {
+              setError(null);
+              // Reload questions
+              const loadQuestions = async () => {
+                try {
+                  const fetchedQuestions = await apiService.getQuestions(language);
+                  setQuestions({ [language]: fetchedQuestions || [] });
+                  setFilteredQuestions(fetchedQuestions || []);
+                  onQuestionsUpdate?.(fetchedQuestions || []);
+                } catch (err) {
+                  console.error('Failed to reload questions:', err);
+                }
+              };
+              loadQuestions();
+            }}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -197,9 +255,14 @@ export default function QuestionBoard({
       )}
 
       {/* Questions List */}
+      {filteredQuestions.length > 0 && (
+        <div className="mb-4 text-sm text-gray-500">
+          Showing {filteredQuestions.length} question{filteredQuestions.length !== 1 ? 's' : ''}
+        </div>
+      )}
       {filteredQuestions.map((q, index) => (
         <div
-          key={q._id || q.id}
+          key={q._id || q.id || `question-${index}`}
           className="border rounded-xl p-4 mb-4 hover:shadow-md transition"
         >
           <div className="flex justify-between items-start">

@@ -106,7 +106,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         data-placeholder={placeholder}
       />
       
-      <style jsx>{`
+      <style>{`
         [contenteditable]:empty:before {
           content: attr(data-placeholder);
           color: #9ca3af;
