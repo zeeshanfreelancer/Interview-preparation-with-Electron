@@ -4,6 +4,7 @@ import { MdFormatListNumbered, MdColorize } from 'react-icons/md';
 
 export default function RichTextEditor({ value, onChange, placeholder, className = "" }) {
   const editorRef = useRef(null);
+  const cleanupRef = useRef(null);
 
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== value) {
@@ -11,9 +12,27 @@ export default function RichTextEditor({ value, onChange, placeholder, className
     }
   }, [value]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (cleanupRef.current) {
+        clearTimeout(cleanupRef.current);
+      }
+      if (editorRef.current) {
+        editorRef.current.innerHTML = '';
+      }
+    };
+  }, []);
+
   const handleInput = () => {
     if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
+      // Debounce input to reduce memory churn
+      if (cleanupRef.current) {
+        clearTimeout(cleanupRef.current);
+      }
+      cleanupRef.current = setTimeout(() => {
+        onChange(editorRef.current.innerHTML);
+      }, 100);
     }
   };
 

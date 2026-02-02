@@ -13,11 +13,8 @@ import {
   FiUpload
 } from "react-icons/fi";
 import QuestionBoard from "./QuestionBoard";
-import { apiService } from "../services/api";
+import { localStorageService } from "../services/localStorage";
 import { exportToPDF, exportToWord, exportToJSON, importFromJSON } from "../utils/exportImport";
-
-// Default languages configuration
-const DEFAULT_LANGUAGES = ['React', 'JavaScript', 'HTML', 'CSS'];
 
 function LanguageTabs() {
   const [languages, setLanguages] = useState([]);
@@ -45,45 +42,34 @@ function LanguageTabs() {
 
   // Load languages from API
   useEffect(() => {
-    let timeoutId1 = null;
-    let timeoutId2 = null;
+    let timeoutId = null;
     
     const loadLanguages = async () => {
       try {
         setLoading(true);
-        const startTime = Date.now();
-        const fetchedLanguages = await apiService.getLanguages();
-        // Ensure we have at least one default language
-        const defaultLanguages = fetchedLanguages.length > 0 ? fetchedLanguages : DEFAULT_LANGUAGES;
-        setLanguages(defaultLanguages);
-        setActiveLang(defaultLanguages[0]);
+        const fetchedLanguages = await localStorageService.getLanguages();
+        setLanguages(fetchedLanguages);
+        if (fetchedLanguages.length > 0) {
+          setActiveLang(fetchedLanguages[0]);
+        }
         setError(null);
         
-        // Ensure loader shows for at least 2 seconds
-        const elapsedTime = Date.now() - startTime;
-        const remainingTime = Math.max(0, 2000 - elapsedTime);
-        
-        timeoutId1 = setTimeout(() => {
+        timeoutId = setTimeout(() => {
           setLoading(false);
-        }, remainingTime);
+        }, 1000); // Reduced from 2 seconds
       } catch (err) {
-        // Logging removed in production
-        // Fallback to default languages if API fails
-        setLanguages(DEFAULT_LANGUAGES);
-        setActiveLang(DEFAULT_LANGUAGES[0]);
+        setLanguages([]);
         setError('Failed to load languages from server');
-        timeoutId2 = setTimeout(() => {
+        timeoutId = setTimeout(() => {
           setLoading(false);
-        }, 2000);
+        }, 1000);
       }
     };
 
     loadLanguages();
     
-    // Cleanup timeouts on unmount
     return () => {
-      if (timeoutId1) clearTimeout(timeoutId1);
-      if (timeoutId2) clearTimeout(timeoutId2);
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, []);
 
@@ -93,7 +79,9 @@ function LanguageTabs() {
   const addLanguage = () => {
     if (!newLanguage.trim() || languages.includes(newLanguage.trim())) return;
 
-    setLanguages([...languages, newLanguage.trim()]);
+    const newLanguages = [...languages, newLanguage.trim()];
+    setLanguages(newLanguages);
+    localStorageService.saveLanguages(newLanguages);
     setNewLanguage("");
   };
 
@@ -101,7 +89,7 @@ function LanguageTabs() {
     if (languages.length <= 1) return; // Keep at least one language
 
     try {
-      await apiService.deleteLanguage(langToDelete);
+      await localStorageService.deleteLanguage(langToDelete);
       
       const newLanguages = languages.filter(lang => lang !== langToDelete);
       setLanguages(newLanguages);
@@ -130,10 +118,12 @@ function LanguageTabs() {
       return;
     }
 
+    // Update languages in localStorage
     const newLanguages = languages.map(lang =>
       lang === editingLang ? editingValue.trim() : lang
     );
     setLanguages(newLanguages);
+    localStorageService.saveLanguages(newLanguages);
 
     // Update active language if it was renamed
     if (activeLang === editingLang) {
@@ -192,7 +182,7 @@ function LanguageTabs() {
       const allQuestions = {};
       for (const lang of languages) {
         try {
-          const langQuestions = await apiService.getQuestions(lang);
+          const langQuestions = await localStorageService.getQuestions(lang);
           if (langQuestions.length > 0) {
             allQuestions[lang] = langQuestions;
           }
@@ -245,7 +235,7 @@ function LanguageTabs() {
       
       // Import questions to current language
       for (const q of data.questions) {
-        await apiService.createQuestion({
+        await localStorageService.createQuestion({
           language: activeLang,
           question: q.question,
           answer: q.answer
@@ -253,7 +243,7 @@ function LanguageTabs() {
       }
       
       // Reload questions
-      const updatedQuestions = await apiService.getQuestions(activeLang);
+      const updatedQuestions = await localStorageService.getQuestions(activeLang);
       setQuestions(updatedQuestions);
       
       alert(`Successfully imported ${data.questions.length} questions`);
@@ -330,6 +320,18 @@ function LanguageTabs() {
       {/* Tabs and Menu */}
       <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 py-2">
         <div className="max-w-6xl mx-auto flex justify-center items-center gap-4 px-4">
+      {languages.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-600 mb-4">No languages yet. Add your first one!</p>
+          <button
+            onClick={openModal}
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors shadow-md hover:shadow-lg cursor-pointer"
+          >
+            <FiPlus className="inline mr-2" /> Add Language
+          </button>
+        </div>
+      ) : (
+        <>
         <div className="bg-purple-100 p-2 rounded-full flex gap-2 flex-wrap">
           {languages.map((lang) => (
             <div key={lang} className="flex items-center">
@@ -481,6 +483,8 @@ function LanguageTabs() {
         >
           <FiMoreHorizontal />
         </button>
+        </>
+      )}
         </div>
       </div>
 
@@ -614,21 +618,23 @@ function LanguageTabs() {
       )}
 
         {/* Question Board */}
-        <QuestionBoard
-          language={activeLang}
-          searchTerm={searchTerm}
-          languages={languages}
-          questionModalOpen={questionModalOpen}
-          selectedQuestionId={selectedQuestionId}
-          editingQuestionText={editingQuestionText}
-          editingAnswerText={editingAnswerText}
-          onOpenQuestionModal={openQuestionModal}
-          onCloseQuestionModal={closeQuestionModal}
-          onSetEditingQuestionText={setEditingQuestionText}
-          onSetEditingAnswerText={setEditingAnswerText}
-          onQuestionsUpdate={setQuestions}
-          loading={false}
-        />
+        {activeLang && (
+          <QuestionBoard
+            language={activeLang}
+            searchTerm={searchTerm}
+            languages={languages}
+            questionModalOpen={questionModalOpen}
+            selectedQuestionId={selectedQuestionId}
+            editingQuestionText={editingQuestionText}
+            editingAnswerText={editingAnswerText}
+            onOpenQuestionModal={openQuestionModal}
+            onCloseQuestionModal={closeQuestionModal}
+            onSetEditingQuestionText={setEditingQuestionText}
+            onSetEditingAnswerText={setEditingAnswerText}
+            onQuestionsUpdate={setQuestions}
+            loading={false}
+          />
+        )}
       </div>
     </div>
   );

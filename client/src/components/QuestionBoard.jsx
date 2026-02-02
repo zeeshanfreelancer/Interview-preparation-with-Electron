@@ -8,7 +8,7 @@ import {
   FiCheck,
   FiPlus
 } from "react-icons/fi";
-import { apiService } from "../services/api";
+import { localStorageService } from "../services/localStorage";
 import RichTextEditor from "./RichTextEditor";
 
 export default function QuestionBoard({
@@ -52,7 +52,7 @@ export default function QuestionBoard({
       try {
         // Logging removed in production to prevent performance issues
         
-        const fetchedQuestions = await apiService.getQuestions(language);
+        const fetchedQuestions = await localStorageService.getQuestions(language);
         // Logging removed in production
         
         if (!Array.isArray(fetchedQuestions)) {
@@ -147,13 +147,13 @@ export default function QuestionBoard({
       
       if (selectedQuestionId) {
         // Update existing question
-        await apiService.updateQuestion(selectedQuestionId, {
+        await localStorageService.updateQuestion(selectedQuestionId, {
           question: editingQuestionText.trim(),
           answer: editingAnswerText
         });
       } else {
         // Add new question
-        await apiService.createQuestion({
+        await localStorageService.createQuestion({
           language,
           question: editingQuestionText.trim(),
           answer: editingAnswerText
@@ -161,7 +161,7 @@ export default function QuestionBoard({
       }
 
       // Reload questions after save
-      const updatedQuestions = await apiService.getQuestions(language);
+      const updatedQuestions = await localStorageService.getQuestions(language);
       
       setQuestions({ [language]: updatedQuestions || [] });
       setFilteredQuestions(updatedQuestions || []);
@@ -186,10 +186,10 @@ export default function QuestionBoard({
 
   const deleteQuestionAndAnswer = async () => {
     try {
-      await apiService.deleteQuestion(selectedQuestionId);
+      await localStorageService.deleteQuestion(selectedQuestionId);
 
       // Reload questions after delete
-      const updatedQuestions = await apiService.getQuestions(language);
+      const updatedQuestions = await localStorageService.getQuestions(language);
       setQuestions({ [language]: updatedQuestions });
       setFilteredQuestions(updatedQuestions);
       onQuestionsUpdate?.(updatedQuestions);
@@ -226,7 +226,7 @@ export default function QuestionBoard({
               // Reload questions
               const loadQuestions = async () => {
                 try {
-                  const fetchedQuestions = await apiService.getQuestions(language);
+                  const fetchedQuestions = await localStorageService.getQuestions(language);
                   setQuestions({ [language]: fetchedQuestions || [] });
                   setFilteredQuestions(fetchedQuestions || []);
                   onQuestionsUpdate?.(fetchedQuestions || []);
