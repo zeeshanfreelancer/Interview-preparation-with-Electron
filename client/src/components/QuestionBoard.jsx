@@ -333,6 +333,11 @@ export default function QuestionBoard({
                 {selectedQuestionId ? 'Manage Question' : 'Add New Question'}
               </h2>
               <div className="flex items-center gap-3">
+                {selectedQuestionId && (
+                  <button onClick={deleteQuestionAndAnswer} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors cursor-pointer">
+                    <FiTrash2 className="inline mr-2" /> Delete Question
+                  </button>
+                )}
                 {selectedQuestionId ? (
                   <button 
                     onClick={saveQuestionChanges} 
@@ -380,15 +385,6 @@ export default function QuestionBoard({
                   className="min-h-[120px]"
                 />
               </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex justify-start p-6 border-t border-gray-200">
-              {selectedQuestionId && (
-                <button onClick={deleteQuestionAndAnswer} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors cursor-pointer">
-                  <FiTrash2 className="inline mr-2" /> Delete Question
-                </button>
-              )}
             </div>
           </div>
         </div>

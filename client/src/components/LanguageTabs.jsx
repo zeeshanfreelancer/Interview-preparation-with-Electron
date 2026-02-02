@@ -82,24 +82,29 @@ function LanguageTabs() {
     const newLanguages = [...languages, newLanguage.trim()];
     setLanguages(newLanguages);
     localStorageService.saveLanguages(newLanguages);
+    
+    // Auto-select first language if none selected
+    if (!activeLang) {
+      setActiveLang(newLanguage.trim());
+    }
+    
     setNewLanguage("");
   };
 
   const deleteLanguage = async (langToDelete) => {
-    if (languages.length <= 1) return; // Keep at least one language
-
     try {
       await localStorageService.deleteLanguage(langToDelete);
       
       const newLanguages = languages.filter(lang => lang !== langToDelete);
       setLanguages(newLanguages);
+      localStorageService.saveLanguages(newLanguages);
 
-      // If deleting active language, switch to first remaining language
+      // If deleting active language, switch to first remaining language or clear
       if (activeLang === langToDelete) {
-        setActiveLang(newLanguages[0]);
+        setActiveLang(newLanguages.length > 0 ? newLanguages[0] : "");
       }
 
-      setSearchTerm(""); // Clear search when switching languages
+      setSearchTerm("");
     } catch (error) {
       console.error('Failed to delete language:', error);
       alert('Failed to delete language');
@@ -321,17 +326,12 @@ function LanguageTabs() {
       <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 py-2">
         <div className="max-w-6xl mx-auto flex justify-center items-center gap-4 px-4">
       {languages.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-gray-600 mb-4">No languages yet. Add your first one!</p>
-          <button
-            onClick={openModal}
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors shadow-md hover:shadow-lg cursor-pointer"
-          >
-            <FiPlus className="inline mr-2" /> Add Language
-          </button>
+        <div className="bg-gray-100 p-2 rounded-full flex gap-2 flex-wrap">
+          <div className="px-6 py-2 rounded-full bg-gray-200 text-gray-400 font-medium">
+            No languages yet
+          </div>
         </div>
       ) : (
-        <>
         <div className="bg-purple-100 p-2 rounded-full flex gap-2 flex-wrap">
           {languages.map((lang) => (
             <div key={lang} className="flex items-center">
@@ -376,12 +376,18 @@ function LanguageTabs() {
             </div>
           ))}
         </div>
+      )}
 
         {/* Add Question Button */}
         <button
-          onClick={() => openQuestionModal(null)}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors shadow-md hover:shadow-lg cursor-pointer"
-          title="Add new question"
+          onClick={() => languages.length > 0 && openQuestionModal(null)}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors shadow-md hover:shadow-lg ${
+            languages.length > 0 
+              ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer' 
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+          title={languages.length > 0 ? "Add new question" : "Add a language first"}
+          disabled={languages.length === 0}
         >
           <FiPlus className="inline mr-2" /> Add Question
         </button>
@@ -389,13 +395,18 @@ function LanguageTabs() {
         {/* Export Button */}
         <div className="relative" ref={exportMenuRef}>
           <button
-            onClick={() => setExportMenuOpen(!exportMenuOpen)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-md hover:shadow-lg cursor-pointer"
-            title="Export questions"
+            onClick={() => languages.length > 0 && setExportMenuOpen(!exportMenuOpen)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors shadow-md hover:shadow-lg ${
+              languages.length > 0 
+                ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+            title={languages.length > 0 ? "Export questions" : "Add a language first"}
+            disabled={languages.length === 0}
           >
             <FiDownload className="inline mr-2" /> Export
           </button>
-          {exportMenuOpen && (
+          {exportMenuOpen && languages.length > 0 && (
             <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
               <button
                 onClick={() => handleExport('pdf')}
@@ -417,10 +428,9 @@ function LanguageTabs() {
               </button>
             </div>
           )}
-          {exportOptionsOpen && (
+          {exportOptionsOpen && languages.length > 0 && (
             <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[180px]">
               <div className="p-1 border-b border-gray-200">
-                
                 <button
                   onClick={() => executeExport('current', selectedExportFormat)}
                   className="w-full px-1 py-2 text-center hover:bg-gray-50 rounded text-sm cursor-pointer"
@@ -444,7 +454,7 @@ function LanguageTabs() {
           )}
         </div>
 
-        {/* Import Button */}
+        {/* Import Button - Always enabled */}
         <button
           onClick={handleImport}
           className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors shadow-md hover:shadow-lg cursor-pointer"
@@ -463,19 +473,26 @@ function LanguageTabs() {
         {/* Search Icon */}
         <button
           onClick={() => {
-            const newVisibility = !searchVisible;
-            setSearchVisible(newVisibility);
-            if (!newVisibility) {
-              setSearchTerm(""); // Clear search when hiding
+            if (languages.length > 0) {
+              const newVisibility = !searchVisible;
+              setSearchVisible(newVisibility);
+              if (!newVisibility) {
+                setSearchTerm("");
+              }
             }
           }}
-          className="p-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-          title="Toggle search"
+          className={`p-3 rounded-full transition-colors ${
+            languages.length > 0 
+              ? 'text-gray-600 hover:text-gray-800 hover:bg-gray-100 cursor-pointer' 
+              : 'text-gray-400 cursor-not-allowed'
+          }`}
+          title={languages.length > 0 ? "Toggle search" : "Add a language first"}
+          disabled={languages.length === 0}
         >
           <FiSearch size={20} />
         </button>
 
-        {/* Three-dot Menu */}
+        {/* Add Language Button - Always enabled */}
         <button
           onClick={openModal}
           className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
@@ -483,16 +500,14 @@ function LanguageTabs() {
         >
           <FiMoreHorizontal />
         </button>
-        </>
-      )}
         </div>
       </div>
 
       {/* Content with top padding */}
-      <div className="pt-16">
+      <div className="pt-16 pb-8">
 
-      {/* 🔍 Search Box */}
-      {searchVisible && (
+      {/* Search Box - Only show when languages exist and search is visible */}
+      {searchVisible && languages.length > 0 && (
         <div className="mt-6 flex justify-center animate-in slide-in-from-top-2 duration-300">
           <input
             type="text"
@@ -596,15 +611,13 @@ function LanguageTabs() {
                           >
                             <FiEdit2 className="inline mr-1" /> Edit
                           </button>
-                          {languages.length > 1 && (
-                            <button
-                              onClick={() => deleteLanguage(lang)}
-                              className="px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded text-sm font-medium transition-colors cursor-pointer"
-                              title="Delete language"
-                            >
-                              <FiTrash2 className="inline mr-1" /> Delete
-                            </button>
-                          )}
+                          <button
+                            onClick={() => deleteLanguage(lang)}
+                            className="px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded text-sm font-medium transition-colors cursor-pointer"
+                            title="Delete language"
+                          >
+                            <FiTrash2 className="inline mr-1" /> Delete
+                          </button>
                         </div>
                       </>
                     )}
@@ -617,23 +630,39 @@ function LanguageTabs() {
         </div>
       )}
 
-        {/* Question Board */}
-        {activeLang && (
-          <QuestionBoard
-            language={activeLang}
-            searchTerm={searchTerm}
-            languages={languages}
-            questionModalOpen={questionModalOpen}
-            selectedQuestionId={selectedQuestionId}
-            editingQuestionText={editingQuestionText}
-            editingAnswerText={editingAnswerText}
-            onOpenQuestionModal={openQuestionModal}
-            onCloseQuestionModal={closeQuestionModal}
-            onSetEditingQuestionText={setEditingQuestionText}
-            onSetEditingAnswerText={setEditingAnswerText}
-            onQuestionsUpdate={setQuestions}
-            loading={false}
-          />
+        {/* Question Board - Show empty state when no languages */}
+        {languages.length === 0 ? (
+          <div className="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-lg p-6 m-7">
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">📚</div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome to Interview Prep!</h2>
+              <p className="text-gray-600 mb-6">Start by adding your first programming language to organize your interview questions.</p>
+              <button
+                onClick={openModal}
+                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors shadow-md hover:shadow-lg cursor-pointer"
+              >
+                <FiPlus className="inline mr-2" /> Add Your First Language
+              </button>
+            </div>
+          </div>
+        ) : (
+          activeLang && (
+            <QuestionBoard
+              language={activeLang}
+              searchTerm={searchTerm}
+              languages={languages}
+              questionModalOpen={questionModalOpen}
+              selectedQuestionId={selectedQuestionId}
+              editingQuestionText={editingQuestionText}
+              editingAnswerText={editingAnswerText}
+              onOpenQuestionModal={openQuestionModal}
+              onCloseQuestionModal={closeQuestionModal}
+              onSetEditingQuestionText={setEditingQuestionText}
+              onSetEditingAnswerText={setEditingAnswerText}
+              onQuestionsUpdate={setQuestions}
+              loading={false}
+            />
+          )
         )}
       </div>
     </div>
