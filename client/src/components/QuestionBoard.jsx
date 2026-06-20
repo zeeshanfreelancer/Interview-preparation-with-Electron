@@ -249,12 +249,12 @@ export default function QuestionBoard({
               <button
                 onClick={() => setAnswersVisible(prev => ({
                   ...prev,
-                  [q._id || q.id]: prev[q._id || q.id] === undefined ? false : !prev[q._id || q.id]
+                  [q._id || q.id]: !(prev[q._id || q.id] ?? false)
                 }))}
                 className="text-gray-600 hover:text-gray-800 p-1 rounded hover:bg-gray-50 transition-colors cursor-pointer"
-                title={(answersVisible[q._id || q.id] ?? true) ? "Hide answers" : "Show answers"}
+                title={(answersVisible[q._id || q.id] ?? false) ? "Hide answer" : "Show answer"}
               >
-                {(answersVisible[q._id || q.id] ?? true) ? <FiEye /> : <FiEyeOff />}
+                {(answersVisible[q._id || q.id] ?? false) ? <FiEye /> : <FiEyeOff />}
               </button>
               <button
                 onClick={() => openQuestionModalForEdit(q._id || q.id)}
@@ -266,7 +266,7 @@ export default function QuestionBoard({
             </div>
           </div>
 
-          {(answersVisible[q._id || q.id] ?? true) && (
+          {(answersVisible[q._id || q.id] ?? false) && (
             <div className="mt-3 p-3 bg-gray-50 rounded-lg border min-h-[60px]">
               {q.answer ? (
                 <div 
