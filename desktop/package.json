@@ -6,7 +6,7 @@
   "main": "main-simple.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zeeshanfreelancer/Interview-preparation-with-Electron.git"
+    "url": "https://github.com/zeeshanfreelancer/Web-and-Desktop-App-Interview-Preparation-with-React-and-Electron.git"
   },
   "scripts": {
     "start": "electron .",
@@ -35,7 +35,7 @@
     "publish": {
       "provider": "github",
       "owner": "zeeshanfreelancer",
-      "repo": "Interview-preparation-with-Electron"
+      "repo": "Web-and-Desktop-App-Interview-Preparation-with-React-and-Electron"
     },
     "win": {
       "target": "nsis",
