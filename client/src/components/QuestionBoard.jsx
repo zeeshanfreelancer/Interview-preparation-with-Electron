@@ -9,6 +9,7 @@ import {
   FiPlus
 } from "react-icons/fi";
 import { localStorageService } from "../services/localStorage";
+import { highlightHtml } from "../utils/highlightSearch";
 import RichTextEditor from "./RichTextEditor";
 
 export default function QuestionBoard({
@@ -230,7 +231,16 @@ export default function QuestionBoard({
           Showing {filteredQuestions.length} question{filteredQuestions.length !== 1 ? 's' : ''}
         </div>
       )}
-      {filteredQuestions.map((q, index) => (
+      {filteredQuestions.map((q, index) => {
+        const trimmedSearch = searchTerm.trim();
+        const displayQuestion = trimmedSearch
+          ? highlightHtml(q.question, trimmedSearch)
+          : q.question;
+        const displayAnswer = trimmedSearch && q.answer
+          ? highlightHtml(q.answer, trimmedSearch)
+          : q.answer;
+
+        return (
         <div
           key={q._id || q.id || `question-${index}`}
           className="border rounded-xl p-4 mb-4 hover:shadow-md transition"
@@ -239,9 +249,9 @@ export default function QuestionBoard({
             <h3 className="text-lg font-semibold flex-1">
               Q{index + 1}:&nbsp;
               <span 
-                dangerouslySetInnerHTML={{ __html: q.question }}
+                dangerouslySetInnerHTML={{ __html: displayQuestion }}
                 style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
-                className="[&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:mb-1 inline"
+                className="[&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:mb-1 inline [&_.search-highlight]:bg-yellow-200 [&_.search-highlight]:text-yellow-900 [&_.search-highlight]:rounded [&_.search-highlight]:px-0.5"
               />
             </h3>
 
@@ -270,12 +280,12 @@ export default function QuestionBoard({
             <div className="mt-3 p-3 bg-gray-50 rounded-lg border min-h-[60px]">
               {q.answer ? (
                 <div 
-                  dangerouslySetInnerHTML={{ __html: q.answer }} 
+                  dangerouslySetInnerHTML={{ __html: displayAnswer }} 
                   style={{ 
                     whiteSpace: 'pre-wrap', 
                     wordWrap: 'break-word'
                   }}
-                  className="[&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:mb-1"
+                  className="[&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:mb-1 [&_.search-highlight]:bg-yellow-200 [&_.search-highlight]:text-yellow-900 [&_.search-highlight]:rounded [&_.search-highlight]:px-0.5"
                 />
               ) : (
                 <span className="text-gray-400 italic">No answer yet...</span>
@@ -283,7 +293,8 @@ export default function QuestionBoard({
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
 
 
 
