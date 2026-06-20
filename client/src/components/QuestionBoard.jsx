@@ -166,6 +166,9 @@ export default function QuestionBoard({
   };
 
   const deleteQuestionAndAnswer = () => {
+    const confirmed = window.confirm('Are you sure you want to delete this question? This action cannot be undone.');
+    if (!confirmed) return;
+
     try {
       localStorageService.deleteQuestion(selectedQuestionId);
 
