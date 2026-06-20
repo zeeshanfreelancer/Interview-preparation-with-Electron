@@ -5,7 +5,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "build": "npm run build:client && npx electron-builder",
+    "build": "npm run build:client && electron-builder",
     "build:client": "cd ../client && npm run build"
   },
   "build": {
@@ -28,7 +28,8 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "icon.ico"
+      "icon": "icon.ico",
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,
