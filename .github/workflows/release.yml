@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install client dependencies
+        run: npm install --prefix client
+
+      - name: Install desktop dependencies
+        run: npm install --prefix desktop
+
+      - name: Set version from git tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          npm pkg set version="$VERSION" --prefix desktop
+
+      - name: Build and publish to GitHub Releases
+        run: npm run release --prefix desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

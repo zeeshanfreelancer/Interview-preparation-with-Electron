@@ -1,9 +1,62 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs/promises");
+const { autoUpdater } = require("electron-updater");
 
 let mainWindow = null;
 const isDev = !app.isPackaged;
+
+function sendToRenderer(channel, payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, payload);
+  }
+}
+
+function setupAutoUpdater() {
+  if (isDev) return;
+
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+
+  autoUpdater.on("update-available", (info) => {
+    sendToRenderer("update-available", {
+      version: info.version,
+      releaseDate: info.releaseDate
+    });
+  });
+
+  autoUpdater.on("update-not-available", () => {
+    sendToRenderer("update-not-available");
+  });
+
+  autoUpdater.on("download-progress", (progress) => {
+    sendToRenderer("update-download-progress", {
+      percent: progress.percent,
+      transferred: progress.transferred,
+      total: progress.total
+    });
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    sendToRenderer("update-downloaded", {
+      version: info.version
+    });
+  });
+
+  autoUpdater.on("error", (error) => {
+    sendToRenderer("update-error", error?.message || "Update failed");
+  });
+}
+
+function scheduleUpdateCheck() {
+  if (isDev) return;
+
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch((error) => {
+      sendToRenderer("update-error", error?.message || "Update check failed");
+    });
+  }, 3000);
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -25,6 +78,7 @@ function createWindow() {
   } else {
     const indexPath = path.join(process.resourcesPath, "client", "dist", "index.html");
     mainWindow.loadFile(indexPath);
+    mainWindow.webContents.once("did-finish-load", scheduleUpdateCheck);
   }
 
   mainWindow.on("closed", () => {
@@ -60,7 +114,42 @@ ipcMain.handle("dialog:saveFile", async (_event, { defaultPath, filters, content
   return filePath;
 });
 
-app.whenReady().then(createWindow);
+ipcMain.handle("get-app-version", () => app.getVersion());
+
+ipcMain.handle("check-for-updates", async () => {
+  if (isDev) return { status: "dev" };
+
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return {
+      status: "ok",
+      version: result?.updateInfo?.version ?? app.getVersion()
+    };
+  } catch (error) {
+    return { status: "error", message: error.message };
+  }
+});
+
+ipcMain.handle("download-update", async () => {
+  if (isDev) return { status: "dev" };
+
+  try {
+    await autoUpdater.downloadUpdate();
+    return { status: "ok" };
+  } catch (error) {
+    return { status: "error", message: error.message };
+  }
+});
+
+ipcMain.handle("install-update", () => {
+  if (isDev) return { status: "dev" };
+  autoUpdater.quitAndInstall();
+});
+
+app.whenReady().then(() => {
+  setupAutoUpdater();
+  createWindow();
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
