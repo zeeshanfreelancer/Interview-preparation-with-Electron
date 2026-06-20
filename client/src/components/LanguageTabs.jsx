@@ -27,6 +27,7 @@ function LanguageTabs() {
   const [editingValue, setEditingValue] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [questionModalOpen, setQuestionModalOpen] = useState(false);
+  const [editorSessionKey, setEditorSessionKey] = useState(0);
   const [selectedQuestionId, setSelectedQuestionId] = useState(null);
   const [editingQuestionText, setEditingQuestionText] = useState("");
   const [editingAnswerText, setEditingAnswerText] = useState("");
@@ -108,6 +109,7 @@ function LanguageTabs() {
   };
 
   const openQuestionModal = (questionId) => {
+    setEditorSessionKey((key) => key + 1);
     setSelectedQuestionId(questionId);
     setQuestionModalOpen(true);
 
@@ -646,6 +648,7 @@ function LanguageTabs() {
               language={activeLang}
               searchTerm={searchTerm}
               questionModalOpen={questionModalOpen}
+              editorSessionKey={editorSessionKey}
               selectedQuestionId={selectedQuestionId}
               editingQuestionText={editingQuestionText}
               editingAnswerText={editingAnswerText}

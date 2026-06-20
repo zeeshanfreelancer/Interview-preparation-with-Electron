@@ -4,42 +4,42 @@ import { MdFormatListNumbered, MdColorize } from 'react-icons/md';
 
 export default function RichTextEditor({ value, onChange, placeholder, className = "" }) {
   const editorRef = useRef(null);
-  const cleanupRef = useRef(null);
+  const lastSyncedValue = useRef(null);
 
   useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== value) {
-      editorRef.current.innerHTML = value || '';
+    const nextValue = value ?? '';
+    if (lastSyncedValue.current === nextValue) return;
+
+    lastSyncedValue.current = nextValue;
+    if (editorRef.current) {
+      editorRef.current.innerHTML = nextValue;
     }
   }, [value]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (cleanupRef.current) {
-        clearTimeout(cleanupRef.current);
-      }
       if (editorRef.current) {
         editorRef.current.innerHTML = '';
       }
     };
   }, []);
 
-  const handleInput = () => {
-    if (editorRef.current) {
-      // Debounce input to reduce memory churn
-      if (cleanupRef.current) {
-        clearTimeout(cleanupRef.current);
-      }
-      cleanupRef.current = setTimeout(() => {
-        onChange(editorRef.current.innerHTML);
-      }, 100);
-    }
+  const syncValue = () => {
+    if (!editorRef.current) return;
+
+    const html = editorRef.current.innerHTML;
+    lastSyncedValue.current = html;
+    onChange(html);
   };
 
-  const execCommand = (command, value = null) => {
-    document.execCommand(command, false, value);
-    editorRef.current.focus();
-    handleInput();
+  const handleInput = () => {
+    syncValue();
+  };
+
+  const execCommand = (command, commandValue = null) => {
+    document.execCommand(command, false, commandValue);
+    editorRef.current?.focus();
+    syncValue();
   };
 
   const changeFontSize = (size) => {
@@ -48,10 +48,10 @@ export default function RichTextEditor({ value, onChange, placeholder, className
 
   return (
     <div className="border border-gray-300 rounded-lg overflow-hidden">
-      {/* Toolbar */}
       <div className="flex items-center gap-1 p-2 bg-gray-50 border-b border-gray-300">
         <button
           type="button"
+          onMouseDown={(event) => event.preventDefault()}
           onClick={() => execCommand('bold')}
           className="p-2 hover:bg-gray-200 rounded transition-colors"
           title="Bold"
@@ -60,6 +60,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         </button>
         <button
           type="button"
+          onMouseDown={(event) => event.preventDefault()}
           onClick={() => execCommand('italic')}
           className="p-2 hover:bg-gray-200 rounded transition-colors"
           title="Italic"
@@ -68,6 +69,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         </button>
         <button
           type="button"
+          onMouseDown={(event) => event.preventDefault()}
           onClick={() => execCommand('insertUnorderedList')}
           className="p-2 hover:bg-gray-200 rounded transition-colors"
           title="Bullet List"
@@ -76,6 +78,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         </button>
         <button
           type="button"
+          onMouseDown={(event) => event.preventDefault()}
           onClick={() => execCommand('insertOrderedList')}
           className="p-2 hover:bg-gray-200 rounded transition-colors"
           title="Numbered List"
@@ -85,6 +88,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         <div className="flex items-center gap-1 ml-2">
           <FiType className="text-gray-600" />
           <select
+            onMouseDown={(event) => event.stopPropagation()}
             onChange={(e) => changeFontSize(e.target.value)}
             className="text-sm border border-gray-300 rounded px-2 py-1"
             defaultValue="3"
@@ -98,6 +102,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         <div className="flex items-center gap-1 ml-2">
           <MdColorize className="text-gray-600" />
           <select
+            onMouseDown={(event) => event.stopPropagation()}
             onChange={(e) => execCommand('foreColor', e.target.value)}
             className="text-sm border border-gray-300 rounded px-2 py-1"
             defaultValue="#000000"
@@ -113,18 +118,18 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           </select>
         </div>
       </div>
-      
-      {/* Editor */}
+
       <div
         ref={editorRef}
         contentEditable
         onInput={handleInput}
+        onBlur={syncValue}
         className={`p-3 min-h-[120px] focus:outline-none [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:mb-1 ${className}`}
         style={{ whiteSpace: 'pre-wrap' }}
         suppressContentEditableWarning={true}
         data-placeholder={placeholder}
       />
-      
+
       <style>{`
         [contenteditable]:empty:before {
           content: attr(data-placeholder);

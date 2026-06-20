@@ -16,6 +16,7 @@ export default function QuestionBoard({
   language,
   searchTerm,
   questionModalOpen,
+  editorSessionKey,
   selectedQuestionId,
   editingQuestionText,
   editingAnswerText,
@@ -105,8 +106,6 @@ export default function QuestionBoard({
   }, [editingQuestionText, editingAnswerText, originalQuestion, originalAnswer, selectedQuestionId]);
 
   const openQuestionModalForEdit = (questionId) => {
-    onOpenQuestionModal(questionId);
-    // Set initial values for editing
     if (questionId) {
       const question = (questions[language] || []).find(q => (q._id || q.id) === questionId);
       if (question) {
@@ -116,9 +115,13 @@ export default function QuestionBoard({
         setOriginalAnswer(question.answer);
       }
     } else {
+      onSetEditingQuestionText('');
+      onSetEditingAnswerText('');
       setOriginalQuestion('');
       setOriginalAnswer('');
     }
+
+    onOpenQuestionModal(questionId);
     setHasUnsavedChanges(false);
   };
 
@@ -153,8 +156,6 @@ export default function QuestionBoard({
       setOriginalQuestion(editingQuestionText.trim());
       setOriginalAnswer(editingAnswerText);
       setHasUnsavedChanges(false);
-
-      alert(selectedQuestionId ? 'Question updated successfully!' : 'Question added successfully!');
 
       onCloseQuestionModal();
     } catch (err) {
@@ -411,6 +412,7 @@ export default function QuestionBoard({
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Question</label>
                 <RichTextEditor
+                  key={`question-${editorSessionKey}`}
                   value={editingQuestionText}
                   onChange={onSetEditingQuestionText}
                   placeholder="Enter your question..."
@@ -422,6 +424,7 @@ export default function QuestionBoard({
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Answer</label>
                 <RichTextEditor
+                  key={`answer-${editorSessionKey}`}
                   value={editingAnswerText}
                   onChange={onSetEditingAnswerText}
                   placeholder="Write your answer..."
