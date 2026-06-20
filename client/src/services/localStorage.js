@@ -142,6 +142,54 @@ export const localStorageService = {
     }
   },
 
+  moveQuestion(id, targetLanguage) {
+    try {
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      let question = null;
+      let sourceLanguage = null;
+
+      for (const language in data) {
+        const questionIndex = data[language].findIndex(q => q._id === id);
+        if (questionIndex !== -1) {
+          question = data[language][questionIndex];
+          sourceLanguage = language;
+          data[language].splice(questionIndex, 1);
+          break;
+        }
+      }
+
+      if (!question) {
+        throw new Error('Question not found');
+      }
+
+      if (sourceLanguage === targetLanguage) {
+        if (!data[targetLanguage]) {
+          data[targetLanguage] = [];
+        }
+        data[targetLanguage].push(question);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        return question;
+      }
+
+      if (!data[targetLanguage]) {
+        data[targetLanguage] = [];
+      }
+
+      const movedQuestion = {
+        ...question,
+        language: targetLanguage,
+        updatedAt: new Date().toISOString()
+      };
+
+      data[targetLanguage].push(movedQuestion);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      return movedQuestion;
+    } catch (error) {
+      console.error('Error moving question:', error);
+      throw error instanceof Error ? error : new Error('Failed to move question');
+    }
+  },
+
   searchQuestions(language, query) {
     try {
       const questions = this.getQuestions(language);

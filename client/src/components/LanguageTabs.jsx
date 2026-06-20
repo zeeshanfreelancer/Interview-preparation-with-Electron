@@ -713,6 +713,7 @@ function LanguageTabs() {
           activeLang && (
             <QuestionBoard
               language={activeLang}
+              languages={languages}
               searchTerm={searchTerm}
               questionModalOpen={questionModalOpen}
               editorSessionKey={editorSessionKey}

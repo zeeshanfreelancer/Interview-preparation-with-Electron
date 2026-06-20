@@ -14,6 +14,7 @@ import RichTextEditor from "./RichTextEditor";
 
 export default function QuestionBoard({
   language,
+  languages,
   searchTerm,
   questionModalOpen,
   editorSessionKey,
@@ -34,6 +35,8 @@ export default function QuestionBoard({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalQuestion, setOriginalQuestion] = useState('');
   const [originalAnswer, setOriginalAnswer] = useState('');
+  const [editingLanguage, setEditingLanguage] = useState('');
+  const [originalLanguage, setOriginalLanguage] = useState('');
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
 
@@ -98,12 +101,15 @@ export default function QuestionBoard({
   // Check for unsaved changes
   useEffect(() => {
     if (selectedQuestionId) {
-      const hasChanges = editingQuestionText !== originalQuestion || editingAnswerText !== originalAnswer;
+      const hasChanges =
+        editingQuestionText !== originalQuestion ||
+        editingAnswerText !== originalAnswer ||
+        editingLanguage !== originalLanguage;
       setHasUnsavedChanges(hasChanges);
     } else {
       setHasUnsavedChanges(editingQuestionText.trim() !== '' || editingAnswerText.trim() !== '');
     }
-  }, [editingQuestionText, editingAnswerText, originalQuestion, originalAnswer, selectedQuestionId]);
+  }, [editingQuestionText, editingAnswerText, editingLanguage, originalQuestion, originalAnswer, originalLanguage, selectedQuestionId]);
 
   const openQuestionModalForEdit = (questionId) => {
     if (questionId) {
@@ -113,12 +119,16 @@ export default function QuestionBoard({
         onSetEditingAnswerText(question.answer);
         setOriginalQuestion(question.question);
         setOriginalAnswer(question.answer);
+        setEditingLanguage(language);
+        setOriginalLanguage(language);
       }
     } else {
       onSetEditingQuestionText('');
       onSetEditingAnswerText('');
       setOriginalQuestion('');
       setOriginalAnswer('');
+      setEditingLanguage(language);
+      setOriginalLanguage(language);
     }
 
     onOpenQuestionModal(questionId);
@@ -135,9 +145,14 @@ export default function QuestionBoard({
       setError(null);
 
       if (selectedQuestionId) {
+        if (editingLanguage !== originalLanguage) {
+          localStorageService.moveQuestion(selectedQuestionId, editingLanguage);
+        }
+
         localStorageService.updateQuestion(selectedQuestionId, {
           question: editingQuestionText.trim(),
-          answer: editingAnswerText
+          answer: editingAnswerText,
+          language: editingLanguage
         });
       } else {
         localStorageService.createQuestion({
@@ -155,6 +170,7 @@ export default function QuestionBoard({
 
       setOriginalQuestion(editingQuestionText.trim());
       setOriginalAnswer(editingAnswerText);
+      setOriginalLanguage(editingLanguage);
       setHasUnsavedChanges(false);
 
       onCloseQuestionModal();
@@ -411,6 +427,28 @@ export default function QuestionBoard({
 
             {/* Modal Content */}
             <div className="p-6 space-y-6">
+              {selectedQuestionId && languages.length > 1 && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Language</label>
+                  <select
+                    value={editingLanguage}
+                    onChange={(event) => setEditingLanguage(event.target.value)}
+                    className="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent bg-white"
+                  >
+                    {languages.map((lang) => (
+                      <option key={lang} value={lang}>
+                        {lang}
+                      </option>
+                    ))}
+                  </select>
+                  {editingLanguage !== originalLanguage && (
+                    <p className="mt-2 text-sm text-purple-600">
+                      This question will move to {editingLanguage} when saved.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Question Input */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Question</label>
