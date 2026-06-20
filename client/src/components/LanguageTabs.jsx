@@ -35,6 +35,7 @@ function LanguageTabs() {
   const [questions, setQuestions] = useState([]);
   const modalRef = useRef(null);
   const fileInputRef = useRef(null);
+  const tabsContainerRef = useRef(null);
 
   const addLanguage = () => {
     if (!newLanguage.trim() || languages.includes(newLanguage.trim())) return;
@@ -291,109 +292,125 @@ function LanguageTabs() {
     };
   }, [questionModalOpen]);
 
+  useEffect(() => {
+    if (!activeLang || !tabsContainerRef.current) return;
+    const activeTab = tabsContainerRef.current.querySelector(
+      `[data-lang="${CSS.escape(activeLang)}"]`
+    );
+    activeTab?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [activeLang, languages]);
+
   return (
     <div className="max-w-6xl mx-auto">
 
-      {/* Tabs and Menu */}
-      <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 py-2">
-        <div className="max-w-6xl mx-auto flex justify-center items-center gap-3 px-4 flex-wrap">
-      {languages.length === 0 ? (
-        <div className="bg-gray-100 p-2 rounded-full flex gap-2 flex-wrap">
-          <div className="px-6 py-2 rounded-full bg-gray-200 text-gray-400 font-medium">
-            No languages yet
-          </div>
-        </div>
-      ) : (
-        <div className="bg-purple-100 p-2 rounded-full flex gap-2 flex-wrap">
-          {languages.map((lang) => (
-            <div key={lang} className="flex items-center">
-              {editingLang === lang ? (
-                <div className="flex items-center gap-1">
-                  <input
-                    type="text"
-                    value={editingValue}
-                    onChange={(e) => setEditingValue(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && saveEdit()}
-                    className="px-3 py-1 text-sm border rounded-full focus:outline-none focus:ring-1 focus:ring-purple-400"
-                    autoFocus
-                  />
-                  <button
-                    onClick={saveEdit}
-                    className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 cursor-pointer"
-                  >
-                    <FiCheck />
-                  </button>
-                  <button
-                    onClick={cancelEdit}
-                    className="px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600 cursor-pointer"
-                  >
-                    <FiX />
-                  </button>
+      {/* Navbar */}
+      <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
+        <div className="max-w-6xl mx-auto px-4 py-2 flex items-center gap-3">
+          {/* Scrollable language tabs */}
+          <div className="flex-1 min-w-0">
+            {languages.length === 0 ? (
+              <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-400 text-sm font-medium">
+                No languages yet
+              </div>
+            ) : (
+              <div
+                ref={tabsContainerRef}
+                className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              >
+                <div className="inline-flex items-center gap-1 bg-purple-100 p-1 rounded-full min-w-min">
+                  {languages.map((lang) => (
+                    <div key={lang} className="flex items-center shrink-0">
+                      {editingLang === lang ? (
+                        <div className="flex items-center gap-1 px-1">
+                          <input
+                            type="text"
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && saveEdit()}
+                            className="w-28 px-2 py-1 text-sm border rounded-full focus:outline-none focus:ring-1 focus:ring-purple-400"
+                            autoFocus
+                          />
+                          <button
+                            onClick={saveEdit}
+                            className="p-1 bg-green-600 text-white rounded-full hover:bg-green-700 cursor-pointer"
+                          >
+                            <FiCheck size={14} />
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="p-1 bg-gray-500 text-white rounded-full hover:bg-gray-600 cursor-pointer"
+                          >
+                            <FiX size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          data-lang={lang}
+                          onClick={() => {
+                            setActiveLang(lang);
+                            setSearchTerm("");
+                          }}
+                          className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition cursor-pointer ${
+                            activeLang === lang
+                              ? "bg-white text-purple-600 shadow-sm"
+                              : "text-gray-600 hover:text-gray-800"
+                          }`}
+                        >
+                          {lang}
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    setActiveLang(lang);
-                    setSearchTerm(""); // language change pe search reset
-                  }}
-                  className={`px-6 py-2 rounded-full font-medium transition ${
-                    activeLang === lang
-                      ? "bg-white text-purple-600 shadow cursor-pointer"
-                      : "text-gray-600 cursor-pointer"
-                  }`}
-                >
-                  {lang}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+              </div>
+            )}
+          </div>
 
-        {/* Add Question Button */}
-        <button
-          onClick={() => languages.length > 0 && openQuestionModal(null)}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors shadow-md hover:shadow-lg ${
-            languages.length > 0 
-              ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer' 
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
-          title={languages.length > 0 ? "Add new question" : "Add a language first"}
-          disabled={languages.length === 0}
-        >
-          <FiPlus className="inline mr-2" /> Add Question
-        </button>
+          {/* Fixed action buttons */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => languages.length > 0 && openQuestionModal(null)}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm ${
+                languages.length > 0
+                  ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer"
+                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+              }`}
+              title={languages.length > 0 ? "Add new question" : "Add a language first"}
+              disabled={languages.length === 0}
+            >
+              <FiPlus className="inline" size={18} />
+              <span className="hidden sm:inline ml-1.5">Add</span>
+            </button>
 
-        {/* Search Icon */}
-        <button
-          onClick={() => {
-            if (languages.length > 0) {
-              const newVisibility = !searchVisible;
-              setSearchVisible(newVisibility);
-              if (!newVisibility) {
-                setSearchTerm("");
-              }
-            }
-          }}
-          className={`p-3 rounded-full transition-colors ${
-            languages.length > 0 
-              ? 'text-gray-600 hover:text-gray-800 hover:bg-gray-100 cursor-pointer' 
-              : 'text-gray-400 cursor-not-allowed'
-          }`}
-          title={languages.length > 0 ? "Toggle search" : "Add a language first"}
-          disabled={languages.length === 0}
-        >
-          <FiSearch size={20} />
-        </button>
+            <button
+              onClick={() => {
+                if (languages.length > 0) {
+                  const newVisibility = !searchVisible;
+                  setSearchVisible(newVisibility);
+                  if (!newVisibility) setSearchTerm("");
+                }
+              }}
+              className={`p-2 rounded-lg transition-colors ${
+                languages.length > 0
+                  ? searchVisible
+                    ? "bg-purple-100 text-purple-600 cursor-pointer"
+                    : "text-gray-600 hover:bg-gray-100 cursor-pointer"
+                  : "text-gray-300 cursor-not-allowed"
+              }`}
+              title={languages.length > 0 ? "Toggle search" : "Add a language first"}
+              disabled={languages.length === 0}
+            >
+              <FiSearch size={18} />
+            </button>
 
-        {/* Settings */}
-        <button
-          onClick={openModal}
-          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-          title="Settings"
-        >
-          <FiMoreHorizontal size={22} />
-        </button>
+            <button
+              onClick={openModal}
+              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              title="Settings"
+            >
+              <FiMoreHorizontal size={20} />
+            </button>
+          </div>
         </div>
       </div>
 
