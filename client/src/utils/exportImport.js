@@ -1,6 +1,39 @@
 import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
+import { isElectron, saveFile } from './electron';
+
+export const parseImportJSON = (raw) => {
+  const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+  if (data.languages && typeof data.languages === 'object' && !Array.isArray(data.languages)) {
+    const languages = {};
+    for (const [language, questions] of Object.entries(data.languages)) {
+      if (Array.isArray(questions)) {
+        languages[language] = questions.map(normalizeQuestion);
+      }
+    }
+    if (Object.keys(languages).length === 0) {
+      throw new Error('No questions found in import file');
+    }
+    return { type: 'multi', languages };
+  }
+
+  if (data.questions && Array.isArray(data.questions)) {
+    return {
+      type: 'single',
+      language: data.language ?? null,
+      questions: data.questions.map(normalizeQuestion)
+    };
+  }
+
+  throw new Error('Invalid JSON format. Expected { questions: [...] } or { languages: { ... } }');
+};
+
+const normalizeQuestion = (question) => ({
+  question: question.question ?? '',
+  answer: question.answer ?? ''
+});
 
 export const exportToPDF = (questions, exportName, isMultiLanguage = false) => {
   const pdf = new jsPDF();
@@ -164,29 +197,41 @@ export const exportToWord = async (questions, exportName, isMultiLanguage = fals
   saveAs(blob, `${exportName}_questions.docx`);
 };
 
-export const exportToJSON = (data, exportName, isMultiLanguage = false) => {
+export const exportToJSON = async (data, exportName, isMultiLanguage = false) => {
   let exportData;
-  
+
   if (isMultiLanguage) {
     exportData = {
       exportDate: new Date().toISOString(),
-      languages: data,
+      languages: Object.fromEntries(
+        Object.entries(data).map(([language, questions]) => [
+          language,
+          questions.map(normalizeQuestion)
+        ])
+      )
     };
   } else {
     exportData = {
       language: exportName,
       exportDate: new Date().toISOString(),
-      questions: data.map(q => ({
-        question: q.question,
-        answer: q.answer,
-      })),
+      questions: data.map(normalizeQuestion)
     };
   }
-  
-  const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-    type: 'application/json',
-  });
-  saveAs(blob, `${exportName}_questions.json`);
+
+  const json = JSON.stringify(exportData, null, 2);
+  const defaultPath = `${exportName}_questions.json`;
+
+  if (isElectron()) {
+    const savedPath = await saveFile({
+      defaultPath,
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      content: json
+    });
+    if (savedPath) return;
+  }
+
+  const blob = new Blob([json], { type: 'application/json' });
+  saveAs(blob, defaultPath);
 };
 
 export const importFromJSON = (file) => {
@@ -194,20 +239,17 @@ export const importFromJSON = (file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data = JSON.parse(e.target.result);
-        if (data.questions && Array.isArray(data.questions)) {
-          resolve(data);
-        } else {
-          reject(new Error('Invalid JSON format'));
-        }
+        resolve(parseImportJSON(e.target.result));
       } catch (error) {
-        reject(new Error('Failed to parse JSON file'));
+        reject(error instanceof Error ? error : new Error('Failed to parse JSON file'));
       }
     };
     reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsText(file);
   });
 };
+
+export const importFromJSONString = (content) => parseImportJSON(content);
 
 // Helper function to strip HTML tags
 const stripHtml = (html) => {

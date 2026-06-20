@@ -112,33 +112,87 @@ export const localStorageService = {
 
   deleteLanguage(language) {
     try {
-      // Remove language from languages list
       const languages = this.getLanguages().filter(lang => lang !== language);
       this.saveLanguages(languages);
-      
-      // Remove all questions for this language
+
       const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       delete data[language];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      
-      return true;
+
+      return languages;
     } catch (error) {
       console.error('Error deleting language:', error);
       throw new Error('Failed to delete language');
     }
   },
 
-  // Health check (always returns OK for localStorage)
-  healthCheck() {
-    return Promise.resolve({
-      status: 'OK',
-      message: 'localStorage is available',
-      timestamp: new Date().toISOString()
-    });
+  renameLanguage(oldName, newName) {
+    try {
+      const trimmed = newName.trim();
+      if (!trimmed) throw new Error('Language name cannot be empty');
+
+      const languages = this.getLanguages();
+      if (languages.includes(trimmed) && trimmed !== oldName) {
+        throw new Error('Language already exists');
+      }
+
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      if (data[oldName]) {
+        data[trimmed] = data[oldName].map(q => ({ ...q, language: trimmed }));
+        delete data[oldName];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      }
+
+      this.saveLanguages(languages.map(lang => (lang === oldName ? trimmed : lang)));
+      return trimmed;
+    } catch (error) {
+      console.error('Error renaming language:', error);
+      throw error instanceof Error ? error : new Error('Failed to rename language');
+    }
   },
 
-  // Database status (localStorage info)
-  getDatabaseStatus() {
+  importQuestions(parsed) {
+    try {
+      let totalImported = 0;
+      const languages = this.getLanguages();
+      const updatedLanguages = [...languages];
+
+      const importForLanguage = (language, questions) => {
+        if (!updatedLanguages.includes(language)) {
+          updatedLanguages.push(language);
+        }
+        for (const q of questions) {
+          this.createQuestion({
+            language,
+            question: q.question,
+            answer: q.answer ?? ''
+          });
+          totalImported += 1;
+        }
+      };
+
+      if (parsed.type === 'multi') {
+        for (const [language, questions] of Object.entries(parsed.languages)) {
+          if (Array.isArray(questions) && questions.length > 0) {
+            importForLanguage(language, questions);
+          }
+        }
+      } else {
+        if (!parsed.targetLanguage) {
+          throw new Error('Select a language before importing');
+        }
+        importForLanguage(parsed.targetLanguage, parsed.questions);
+      }
+
+      this.saveLanguages(updatedLanguages);
+      return { totalImported, languages: updatedLanguages };
+    } catch (error) {
+      console.error('Error importing questions:', error);
+      throw error instanceof Error ? error : new Error('Failed to import questions');
+    }
+  },
+
+  getStorageStatus() {
     try {
       const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       const totalQuestions = Object.values(data).reduce((sum, questions) => sum + questions.length, 0);
@@ -148,19 +202,19 @@ export const localStorageService = {
         questionsByLanguage[language] = questions.length;
       }
       
-      return Promise.resolve({
+      return {
         connected: true,
         totalQuestions,
         questionsByLanguage,
         storageUsed: JSON.stringify(data).length
-      });
+      };
     } catch (error) {
-      return Promise.resolve({
+      return {
         connected: false,
         error: error.message,
         totalQuestions: 0,
         questionsByLanguage: {}
-      });
+      };
     }
   }
 };

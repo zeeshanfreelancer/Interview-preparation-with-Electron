@@ -14,7 +14,6 @@ import RichTextEditor from "./RichTextEditor";
 export default function QuestionBoard({
   language,
   searchTerm,
-  languages,
   questionModalOpen,
   selectedQuestionId,
   editingQuestionText,
@@ -23,8 +22,7 @@ export default function QuestionBoard({
   onCloseQuestionModal,
   onSetEditingQuestionText,
   onSetEditingAnswerText,
-  onQuestionsUpdate,
-  loading
+  onQuestionsUpdate
 }) {
   const [answersVisible, setAnswersVisible] = useState({});
   const [questions, setQuestions] = useState({});
@@ -35,41 +33,35 @@ export default function QuestionBoard({
   const [originalQuestion, setOriginalQuestion] = useState('');
   const [originalAnswer, setOriginalAnswer] = useState('');
 
-  // Load questions from API when language changes
+  // Load questions when language changes
   useEffect(() => {
-    const loadQuestions = async () => {
+    const loadQuestions = () => {
       if (!language) {
         setFilteredQuestions([]);
         setQuestions({});
         return;
       }
 
-      // Clear previous questions immediately when language changes
       setFilteredQuestions([]);
       setError(null);
       setIsLoading(true);
-      
+
       try {
-        // Logging removed in production to prevent performance issues
-        
-        const fetchedQuestions = await localStorageService.getQuestions(language);
-        // Logging removed in production
-        
+        const fetchedQuestions = localStorageService.getQuestions(language);
+
         if (!Array.isArray(fetchedQuestions)) {
-          // Logging removed in production
           setQuestions({ [language]: [] });
           setFilteredQuestions([]);
           onQuestionsUpdate?.([]);
           setIsLoading(false);
           return;
         }
-        
+
         setQuestions({ [language]: fetchedQuestions });
         setFilteredQuestions(fetchedQuestions);
         onQuestionsUpdate?.(fetchedQuestions);
         setIsLoading(false);
       } catch (err) {
-        // Logging removed in production
         const errorMessage = `Failed to load questions: ${err?.message || 'Unknown error'}`;
         setError(errorMessage);
         setQuestions({ [language]: [] });
@@ -107,17 +99,6 @@ export default function QuestionBoard({
     }
   }, [editingQuestionText, editingAnswerText, originalQuestion, originalAnswer, selectedQuestionId]);
 
-
-
-
-  const deleteQuestion = (id) => {
-    setQuestions({
-      ...questions,
-      [language]: (questions[language] || []).filter((q) => q.id !== id),
-    });
-  };
-
-
   const openQuestionModalForEdit = (questionId) => {
     onOpenQuestionModal(questionId);
     // Set initial values for editing
@@ -136,60 +117,53 @@ export default function QuestionBoard({
     setHasUnsavedChanges(false);
   };
 
-  const saveQuestionChanges = async () => {
+  const saveQuestionChanges = () => {
     if (!editingQuestionText.trim()) {
       setError('Question text cannot be empty');
       return;
     }
 
     try {
-      setError(null); // Clear any previous errors
-      
+      setError(null);
+
       if (selectedQuestionId) {
-        // Update existing question
-        await localStorageService.updateQuestion(selectedQuestionId, {
+        localStorageService.updateQuestion(selectedQuestionId, {
           question: editingQuestionText.trim(),
           answer: editingAnswerText
         });
       } else {
-        // Add new question
-        await localStorageService.createQuestion({
+        localStorageService.createQuestion({
           language,
           question: editingQuestionText.trim(),
           answer: editingAnswerText
         });
       }
 
-      // Reload questions after save
-      const updatedQuestions = await localStorageService.getQuestions(language);
-      
+      const updatedQuestions = localStorageService.getQuestions(language);
+
       setQuestions({ [language]: updatedQuestions || [] });
       setFilteredQuestions(updatedQuestions || []);
       onQuestionsUpdate?.(updatedQuestions || []);
 
-      // Update original values after successful save
       setOriginalQuestion(editingQuestionText.trim());
       setOriginalAnswer(editingAnswerText);
       setHasUnsavedChanges(false);
 
-      // Show success message
       alert(selectedQuestionId ? 'Question updated successfully!' : 'Question added successfully!');
-      
+
       onCloseQuestionModal();
     } catch (err) {
-      // Logging removed in production
-      const errorMessage = err?.message || 'Failed to save question. Please check your connection and try again.';
+      const errorMessage = err?.message || 'Failed to save question. Please try again.';
       setError(errorMessage);
       alert(`Error: ${errorMessage}`);
     }
   };
 
-  const deleteQuestionAndAnswer = async () => {
+  const deleteQuestionAndAnswer = () => {
     try {
-      await localStorageService.deleteQuestion(selectedQuestionId);
+      localStorageService.deleteQuestion(selectedQuestionId);
 
-      // Reload questions after delete
-      const updatedQuestions = await localStorageService.getQuestions(language);
+      const updatedQuestions = localStorageService.getQuestions(language);
       setQuestions({ [language]: updatedQuestions });
       setFilteredQuestions(updatedQuestions);
       onQuestionsUpdate?.(updatedQuestions);
@@ -203,7 +177,7 @@ export default function QuestionBoard({
 
 
 
-  if (isLoading || loading) {
+  if (isLoading) {
     return (
       <div className="w-full bg-white rounded-2xl shadow-lg p-6 m-7">
         <div className="flex justify-center items-center py-12">
@@ -223,18 +197,14 @@ export default function QuestionBoard({
           <button
             onClick={() => {
               setError(null);
-              // Reload questions
-              const loadQuestions = async () => {
-                try {
-                  const fetchedQuestions = await localStorageService.getQuestions(language);
-                  setQuestions({ [language]: fetchedQuestions || [] });
-                  setFilteredQuestions(fetchedQuestions || []);
-                  onQuestionsUpdate?.(fetchedQuestions || []);
-                } catch (err) {
-                  console.error('Failed to reload questions:', err);
-                }
-              };
-              loadQuestions();
+              try {
+                const fetchedQuestions = localStorageService.getQuestions(language);
+                setQuestions({ [language]: fetchedQuestions || [] });
+                setFilteredQuestions(fetchedQuestions || []);
+                onQuestionsUpdate?.(fetchedQuestions || []);
+              } catch (err) {
+                console.error('Failed to reload questions:', err);
+              }
             }}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
           >

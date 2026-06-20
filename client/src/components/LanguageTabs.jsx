@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import {
   FiSearch,
-  FiEye,
-  FiEyeOff,
   FiEdit2,
   FiTrash2,
   FiCheck,
@@ -14,11 +12,15 @@ import {
 } from "react-icons/fi";
 import QuestionBoard from "./QuestionBoard";
 import { localStorageService } from "../services/localStorage";
-import { exportToPDF, exportToWord, exportToJSON, importFromJSON } from "../utils/exportImport";
+import { exportToPDF, exportToWord, exportToJSON, importFromJSON, importFromJSONString } from "../utils/exportImport";
+import { isElectron, openJsonFile } from "../utils/electron";
 
 function LanguageTabs() {
-  const [languages, setLanguages] = useState([]);
-  const [activeLang, setActiveLang] = useState("");
+  const [languages, setLanguages] = useState(() => localStorageService.getLanguages());
+  const [activeLang, setActiveLang] = useState(() => {
+    const initialLanguages = localStorageService.getLanguages();
+    return initialLanguages.length > 0 ? initialLanguages[0] : "";
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [searchVisible, setSearchVisible] = useState(false);
   const [newLanguage, setNewLanguage] = useState("");
@@ -29,52 +31,13 @@ function LanguageTabs() {
   const [selectedQuestionId, setSelectedQuestionId] = useState(null);
   const [editingQuestionText, setEditingQuestionText] = useState("");
   const [editingAnswerText, setEditingAnswerText] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [exportOptionsOpen, setExportOptionsOpen] = useState(false);
   const [selectedExportFormat, setSelectedExportFormat] = useState(null);
   const [questions, setQuestions] = useState([]);
-  const [allLanguagesQuestions, setAllLanguagesQuestions] = useState({});
   const modalRef = useRef(null);
   const fileInputRef = useRef(null);
   const exportMenuRef = useRef(null);
-
-  // Load languages from API
-  useEffect(() => {
-    let timeoutId = null;
-    
-    const loadLanguages = async () => {
-      try {
-        setLoading(true);
-        const fetchedLanguages = await localStorageService.getLanguages();
-        setLanguages(fetchedLanguages);
-        if (fetchedLanguages.length > 0) {
-          setActiveLang(fetchedLanguages[0]);
-        }
-        setError(null);
-        
-        timeoutId = setTimeout(() => {
-          setLoading(false);
-        }, 1000); // Reduced from 2 seconds
-      } catch (err) {
-        setLanguages([]);
-        setError('Failed to load languages from server');
-        timeoutId = setTimeout(() => {
-          setLoading(false);
-        }, 1000);
-      }
-    };
-
-    loadLanguages();
-    
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, []);
-
-  // Note: Question loading is handled by QuestionBoard component
-  // This useEffect was removed to avoid conflicts - QuestionBoard handles all question loading
 
   const addLanguage = () => {
     if (!newLanguage.trim() || languages.includes(newLanguage.trim())) return;
@@ -91,15 +54,11 @@ function LanguageTabs() {
     setNewLanguage("");
   };
 
-  const deleteLanguage = async (langToDelete) => {
+  const deleteLanguage = (langToDelete) => {
     try {
-      await localStorageService.deleteLanguage(langToDelete);
-      
-      const newLanguages = languages.filter(lang => lang !== langToDelete);
+      const newLanguages = localStorageService.deleteLanguage(langToDelete);
       setLanguages(newLanguages);
-      localStorageService.saveLanguages(newLanguages);
 
-      // If deleting active language, switch to first remaining language or clear
       if (activeLang === langToDelete) {
         setActiveLang(newLanguages.length > 0 ? newLanguages[0] : "");
       }
@@ -117,22 +76,28 @@ function LanguageTabs() {
   };
 
   const saveEdit = () => {
-    if (!editingValue.trim() || languages.includes(editingValue.trim())) {
+    const trimmed = editingValue.trim();
+    if (!trimmed || (trimmed !== editingLang && languages.includes(trimmed))) {
       setEditingLang(null);
       setEditingValue("");
       return;
     }
 
-    // Update languages in localStorage
-    const newLanguages = languages.map(lang =>
-      lang === editingLang ? editingValue.trim() : lang
-    );
-    setLanguages(newLanguages);
-    localStorageService.saveLanguages(newLanguages);
+    try {
+      if (trimmed !== editingLang) {
+        localStorageService.renameLanguage(editingLang, trimmed);
+        const newLanguages = languages.map(lang =>
+          lang === editingLang ? trimmed : lang
+        );
+        setLanguages(newLanguages);
 
-    // Update active language if it was renamed
-    if (activeLang === editingLang) {
-      setActiveLang(editingValue.trim());
+        if (activeLang === editingLang) {
+          setActiveLang(trimmed);
+        }
+      }
+    } catch (error) {
+      alert(error.message || 'Failed to rename language');
+      return;
     }
 
     setEditingLang(null);
@@ -144,7 +109,7 @@ function LanguageTabs() {
     setEditingValue("");
   };
 
-  const openQuestionModal = (questionId, mode = 'add') => {
+  const openQuestionModal = (questionId) => {
     setSelectedQuestionId(questionId);
     setQuestionModalOpen(true);
 
@@ -166,10 +131,6 @@ function LanguageTabs() {
   };
 
   const handleExport = (format) => {
-    if (questions.length === 0) {
-      alert('No questions to export');
-      return;
-    }
     setSelectedExportFormat(format);
     setExportMenuOpen(false);
     setExportOptionsOpen(true);
@@ -178,16 +139,14 @@ function LanguageTabs() {
   const executeExport = async (scope, format) => {
     let questionsToExport = [];
     let exportName = '';
-
+    let allQuestions = {};
     if (scope === 'current') {
       questionsToExport = questions;
       exportName = activeLang;
     } else {
-      // Load all questions for all languages
-      const allQuestions = {};
       for (const lang of languages) {
         try {
-          const langQuestions = await localStorageService.getQuestions(lang);
+          const langQuestions = localStorageService.getQuestions(lang);
           if (langQuestions.length > 0) {
             allQuestions[lang] = langQuestions;
           }
@@ -218,16 +177,60 @@ function LanguageTabs() {
         break;
       case 'json':
         if (scope === 'all') {
-          exportToJSON(allQuestions, exportName, true);
+          await exportToJSON(allQuestions, exportName, true);
         } else {
-          exportToJSON(questionsToExport, exportName);
+          await exportToJSON(questionsToExport, exportName);
         }
         break;
     }
     setExportOptionsOpen(false);
   };
 
-  const handleImport = () => {
+  const applyImport = (parsed) => {
+    const targetLanguage =
+      parsed.type === 'single'
+        ? (parsed.language && languages.includes(parsed.language) ? parsed.language : activeLang)
+        : null;
+
+    if (parsed.type === 'single' && !targetLanguage) {
+      throw new Error('Add or select a language before importing');
+    }
+
+    const { totalImported, languages: updatedLanguages } = localStorageService.importQuestions({
+      ...parsed,
+      targetLanguage
+    });
+
+    setLanguages(updatedLanguages);
+    if (updatedLanguages.length > 0 && !updatedLanguages.includes(activeLang)) {
+      setActiveLang(updatedLanguages[0]);
+    }
+
+    const reloadLang = activeLang && updatedLanguages.includes(activeLang)
+      ? activeLang
+      : updatedLanguages[0];
+    if (reloadLang) {
+      setQuestions(localStorageService.getQuestions(reloadLang));
+    }
+
+    return totalImported;
+  };
+
+  const handleImport = async () => {
+    if (isElectron()) {
+      try {
+        const result = await openJsonFile();
+        if (!result) return;
+
+        const parsed = importFromJSONString(result.content);
+        const totalImported = applyImport(parsed);
+        alert(`Successfully imported ${totalImported} question${totalImported === 1 ? '' : 's'}`);
+      } catch (error) {
+        alert(`Import failed: ${error.message}`);
+      }
+      return;
+    }
+
     fileInputRef.current?.click();
   };
 
@@ -236,27 +239,13 @@ function LanguageTabs() {
     if (!file) return;
 
     try {
-      const data = await importFromJSON(file);
-      
-      // Import questions to current language
-      for (const q of data.questions) {
-        await localStorageService.createQuestion({
-          language: activeLang,
-          question: q.question,
-          answer: q.answer
-        });
-      }
-      
-      // Reload questions
-      const updatedQuestions = await localStorageService.getQuestions(activeLang);
-      setQuestions(updatedQuestions);
-      
-      alert(`Successfully imported ${data.questions.length} questions`);
+      const parsed = await importFromJSON(file);
+      const totalImported = applyImport(parsed);
+      alert(`Successfully imported ${totalImported} question${totalImported === 1 ? '' : 's'}`);
     } catch (error) {
       alert(`Import failed: ${error.message}`);
     }
-    
-    // Reset file input
+
     event.target.value = '';
   };
 
@@ -650,7 +639,6 @@ function LanguageTabs() {
             <QuestionBoard
               language={activeLang}
               searchTerm={searchTerm}
-              languages={languages}
               questionModalOpen={questionModalOpen}
               selectedQuestionId={selectedQuestionId}
               editingQuestionText={editingQuestionText}
@@ -660,7 +648,6 @@ function LanguageTabs() {
               onSetEditingQuestionText={setEditingQuestionText}
               onSetEditingAnswerText={setEditingAnswerText}
               onQuestionsUpdate={setQuestions}
-              loading={false}
             />
           )
         )}
