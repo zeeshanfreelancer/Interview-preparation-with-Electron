@@ -6,7 +6,7 @@ import {
   FiX,
   FiTrash2,
   FiCheck,
-  FiPlus
+  FiMenu
 } from "react-icons/fi";
 import { localStorageService } from "../services/localStorage";
 import { highlightHtml } from "../utils/highlightSearch";
@@ -33,6 +33,10 @@ export default function QuestionBoard({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalQuestion, setOriginalQuestion] = useState('');
   const [originalAnswer, setOriginalAnswer] = useState('');
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
+  const canReorder = !searchTerm.trim();
 
   // Load questions when language changes
   useEffect(() => {
@@ -176,7 +180,40 @@ export default function QuestionBoard({
     }
   };
 
+  const handleDragStart = (index) => {
+    if (!canReorder) return;
+    setDraggedIndex(index);
+  };
 
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragOver = (event, index) => {
+    if (!canReorder || draggedIndex === null) return;
+    event.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDrop = (event, dropIndex) => {
+    event.preventDefault();
+    if (!canReorder || draggedIndex === null || draggedIndex === dropIndex) {
+      handleDragEnd();
+      return;
+    }
+
+    try {
+      const reordered = localStorageService.reorderQuestions(language, draggedIndex, dropIndex);
+      setQuestions({ [language]: reordered });
+      setFilteredQuestions(reordered);
+      onQuestionsUpdate?.(reordered);
+    } catch (err) {
+      console.error('Failed to reorder questions:', err);
+    }
+
+    handleDragEnd();
+  };
 
   if (isLoading) {
     return (
@@ -229,6 +266,9 @@ export default function QuestionBoard({
       {filteredQuestions.length > 0 && (
         <div className="mb-4 text-sm text-gray-500">
           Showing {filteredQuestions.length} question{filteredQuestions.length !== 1 ? 's' : ''}
+          {canReorder && (questions[language] || []).length > 1 && (
+            <span className="ml-2 text-gray-400">· Drag to reorder</span>
+          )}
         </div>
       )}
       {filteredQuestions.map((q, index) => {
@@ -243,10 +283,32 @@ export default function QuestionBoard({
         return (
         <div
           key={q._id || q.id || `question-${index}`}
-          className="border rounded-xl p-4 mb-4 hover:shadow-md transition"
+          onDragOver={(event) => handleDragOver(event, index)}
+          onDrop={(event) => handleDrop(event, index)}
+          className={`border rounded-xl p-4 mb-4 transition ${
+            draggedIndex === index
+              ? 'opacity-50 border-dashed border-purple-300'
+              : dragOverIndex === index && draggedIndex !== null && draggedIndex !== index
+                ? 'border-purple-400 shadow-md ring-2 ring-purple-100'
+                : 'hover:shadow-md'
+          }`}
         >
-          <div className="flex justify-between items-start">
-            <h3 className="text-lg font-semibold flex-1">
+          <div className="flex justify-between items-start gap-2">
+            {canReorder && (
+              <div
+                draggable
+                onDragStart={(event) => {
+                  handleDragStart(index);
+                  event.dataTransfer.effectAllowed = 'move';
+                }}
+                onDragEnd={handleDragEnd}
+                className="mt-1 p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing rounded hover:bg-gray-100 shrink-0"
+                title="Drag to reorder"
+              >
+                <FiMenu size={18} />
+              </div>
+            )}
+            <h3 className="text-lg font-semibold flex-1 min-w-0">
               Q{index + 1}:&nbsp;
               <span 
                 dangerouslySetInnerHTML={{ __html: displayQuestion }}

@@ -116,6 +116,32 @@ export const localStorageService = {
     }
   },
 
+  reorderQuestions(language, fromIndex, toIndex) {
+    try {
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      const list = [...(data[language] || [])];
+
+      if (
+        fromIndex < 0 ||
+        fromIndex >= list.length ||
+        toIndex < 0 ||
+        toIndex >= list.length ||
+        fromIndex === toIndex
+      ) {
+        return list;
+      }
+
+      const [moved] = list.splice(fromIndex, 1);
+      list.splice(toIndex, 0, moved);
+      data[language] = list;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      return list;
+    } catch (error) {
+      console.error('Error reordering questions:', error);
+      throw new Error('Failed to reorder questions');
+    }
+  },
+
   searchQuestions(language, query) {
     try {
       const questions = this.getQuestions(language);
