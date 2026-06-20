@@ -1,12 +1,50 @@
 const STORAGE_KEY = 'interview-questions';
 const LANGUAGES_KEY = 'interview-languages';
 
+let idCounter = 0;
+
+const generateQuestionId = () => {
+  idCounter += 1;
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${idCounter}-${Math.random().toString(36).slice(2, 9)}`;
+};
+
+const ensureUniqueQuestionIds = (questions) => {
+  const seen = new Set();
+  let changed = false;
+
+  const normalized = questions.map((question) => {
+    const id = question._id || question.id;
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      return question;
+    }
+
+    changed = true;
+    const newId = generateQuestionId();
+    seen.add(newId);
+    return { ...question, _id: newId };
+  });
+
+  return { questions: normalized, changed };
+};
+
 export const localStorageService = {
   // Questions
   getQuestions(language) {
     try {
       const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      return data[language] || [];
+      const questions = data[language] || [];
+      const { questions: uniqueQuestions, changed } = ensureUniqueQuestionIds(questions);
+
+      if (changed) {
+        data[language] = uniqueQuestions;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      }
+
+      return uniqueQuestions;
     } catch (error) {
       console.error('Error reading questions:', error);
       return [];
@@ -22,7 +60,7 @@ export const localStorageService = {
       
       const newQuestion = {
         ...questionData,
-        _id: Date.now().toString(),
+        _id: generateQuestionId(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -156,16 +194,24 @@ export const localStorageService = {
       let totalImported = 0;
       const languages = this.getLanguages();
       const updatedLanguages = [...languages];
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
 
       const importForLanguage = (language, questions) => {
         if (!updatedLanguages.includes(language)) {
           updatedLanguages.push(language);
         }
+        if (!data[language]) {
+          data[language] = [];
+        }
+
         for (const q of questions) {
-          this.createQuestion({
+          data[language].push({
             language,
             question: q.question,
-            answer: q.answer ?? ''
+            answer: q.answer ?? '',
+            _id: generateQuestionId(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
           });
           totalImported += 1;
         }
@@ -184,6 +230,7 @@ export const localStorageService = {
         importForLanguage(parsed.targetLanguage, parsed.questions);
       }
 
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       this.saveLanguages(updatedLanguages);
       return { totalImported, languages: updatedLanguages };
     } catch (error) {

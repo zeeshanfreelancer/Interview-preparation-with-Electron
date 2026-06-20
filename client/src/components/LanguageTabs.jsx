@@ -6,7 +6,7 @@ import {
   FiCheck,
   FiX,
   FiPlus,
-  FiMoreHorizontal,
+  FiSettings,
   FiUpload
 } from "react-icons/fi";
 import QuestionBoard from "./QuestionBoard";
@@ -405,10 +405,11 @@ function LanguageTabs() {
 
             <button
               onClick={openModal}
-              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-600 transition-colors cursor-pointer"
               title="Settings"
             >
-              <FiMoreHorizontal size={20} />
+              <FiSettings size={16} />
+              <span className="hidden sm:inline">Settings</span>
             </button>
           </div>
         </div>
