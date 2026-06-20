@@ -7,7 +7,6 @@ import {
   FiX,
   FiPlus,
   FiMoreHorizontal,
-  FiDownload,
   FiUpload
 } from "react-icons/fi";
 import QuestionBoard from "./QuestionBoard";
@@ -31,13 +30,11 @@ function LanguageTabs() {
   const [selectedQuestionId, setSelectedQuestionId] = useState(null);
   const [editingQuestionText, setEditingQuestionText] = useState("");
   const [editingAnswerText, setEditingAnswerText] = useState("");
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [exportOptionsOpen, setExportOptionsOpen] = useState(false);
   const [selectedExportFormat, setSelectedExportFormat] = useState(null);
   const [questions, setQuestions] = useState([]);
   const modalRef = useRef(null);
   const fileInputRef = useRef(null);
-  const exportMenuRef = useRef(null);
 
   const addLanguage = () => {
     if (!newLanguage.trim() || languages.includes(newLanguage.trim())) return;
@@ -132,7 +129,6 @@ function LanguageTabs() {
 
   const handleExport = (format) => {
     setSelectedExportFormat(format);
-    setExportMenuOpen(false);
     setExportOptionsOpen(true);
   };
 
@@ -257,22 +253,9 @@ function LanguageTabs() {
     setModalOpen(false);
     setEditingLang(null);
     setEditingValue("");
+    setExportOptionsOpen(false);
+    setSelectedExportFormat(null);
   };
-
-  // Close export menus when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
-        setExportMenuOpen(false);
-        setExportOptionsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   // Close modal when clicking outside
   useEffect(() => {
@@ -313,7 +296,7 @@ function LanguageTabs() {
 
       {/* Tabs and Menu */}
       <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 py-2">
-        <div className="max-w-6xl mx-auto flex justify-center items-center gap-4 px-4">
+        <div className="max-w-6xl mx-auto flex justify-center items-center gap-3 px-4 flex-wrap">
       {languages.length === 0 ? (
         <div className="bg-gray-100 p-2 rounded-full flex gap-2 flex-wrap">
           <div className="px-6 py-2 rounded-full bg-gray-200 text-gray-400 font-medium">
@@ -381,84 +364,6 @@ function LanguageTabs() {
           <FiPlus className="inline mr-2" /> Add Question
         </button>
 
-        {/* Export Button */}
-        <div className="relative" ref={exportMenuRef}>
-          <button
-            onClick={() => languages.length > 0 && setExportMenuOpen(!exportMenuOpen)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors shadow-md hover:shadow-lg ${
-              languages.length > 0 
-                ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' 
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-            title={languages.length > 0 ? "Export questions" : "Add a language first"}
-            disabled={languages.length === 0}
-          >
-            <FiDownload className="inline mr-2" /> Export
-          </button>
-          {exportMenuOpen && languages.length > 0 && (
-            <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
-              <button
-                onClick={() => handleExport('pdf')}
-                className="w-full px-4 py-2 text-left hover:bg-gray-50 rounded-t-lg cursor-pointer"
-              >
-                PDF
-              </button>
-              <button
-                onClick={() => handleExport('word')}
-                className="w-full px-4 py-2 text-left hover:bg-gray-50 cursor-pointer"
-              >
-                Word
-              </button>
-              <button
-                onClick={() => handleExport('json')}
-                className="w-full px-4 py-2 text-left hover:bg-gray-50 rounded-b-lg cursor-pointer"
-              >
-                JSON
-              </button>
-            </div>
-          )}
-          {exportOptionsOpen && languages.length > 0 && (
-            <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[180px]">
-              <div className="p-1 border-b border-gray-200">
-                <button
-                  onClick={() => executeExport('current', selectedExportFormat)}
-                  className="w-full px-1 py-2 text-center hover:bg-gray-50 rounded text-sm cursor-pointer"
-                >
-                  Current Language
-                </button>
-                <button
-                  onClick={() => executeExport('all', selectedExportFormat)}
-                  className="w-full px-1 py-2 text-center hover:bg-gray-50 rounded text-sm cursor-pointer"
-                >
-                  All Languages
-                </button>
-              </div>
-              <button
-                onClick={() => setExportOptionsOpen(false)}
-                className="w-full px-1 py-2 text-center hover:bg-gray-50 rounded-b-lg text-sm text-gray-500 cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Import Button - Always enabled */}
-        <button
-          onClick={handleImport}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors shadow-md hover:shadow-lg cursor-pointer"
-          title="Import questions from JSON"
-        >
-          <FiUpload className="inline mr-2" /> Import
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          onChange={handleFileImport}
-          className="hidden"
-        />
-
         {/* Search Icon */}
         <button
           onClick={() => {
@@ -481,16 +386,24 @@ function LanguageTabs() {
           <FiSearch size={20} />
         </button>
 
-        {/* Add Language Button - Always enabled */}
+        {/* Settings */}
         <button
           onClick={openModal}
           className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-          title="Manage languages"
+          title="Settings"
         >
-          <FiMoreHorizontal />
+          <FiMoreHorizontal size={22} />
         </button>
         </div>
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleFileImport}
+        className="hidden"
+      />
 
       {/* Content with top padding */}
       <div className="pt-16 pb-8">
@@ -518,7 +431,7 @@ function LanguageTabs() {
           >
             {/* Modal Header - Fixed, non-scrollable */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-              <h2 className="text-xl font-bold text-gray-800">Manage Languages</h2>
+              <h2 className="text-xl font-bold text-gray-800">Settings</h2>
               <button
                 onClick={closeModal}
                 className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
@@ -612,6 +525,81 @@ function LanguageTabs() {
                     )}
                   </div>
                 ))}
+              </div>
+
+              {/* Import & Export */}
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
+                  Import & Export
+                </h3>
+
+                <button
+                  onClick={handleImport}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors cursor-pointer"
+                >
+                  <FiUpload /> Import JSON
+                </button>
+
+                <div className="mt-4">
+                  <p className="text-sm text-gray-500 mb-3">Export questions as</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'pdf', label: 'PDF' },
+                      { id: 'word', label: 'Word' },
+                      { id: 'json', label: 'JSON' },
+                    ].map(({ id, label }) => (
+                      <button
+                        key={id}
+                        onClick={() => handleExport(id)}
+                        disabled={languages.length === 0}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                          languages.length === 0
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : selectedExportFormat === id && exportOptionsOpen
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {exportOptionsOpen && languages.length > 0 && (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                      <p className="text-sm text-gray-600 mb-2">
+                        Export {selectedExportFormat?.toUpperCase()} from
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => executeExport('current', selectedExportFormat)}
+                          className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 cursor-pointer"
+                        >
+                          Current Language
+                        </button>
+                        <button
+                          onClick={() => executeExport('all', selectedExportFormat)}
+                          className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 cursor-pointer"
+                        >
+                          All Languages
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setExportOptionsOpen(false);
+                          setSelectedExportFormat(null);
+                        }}
+                        className="w-full mt-2 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+
+                  {languages.length === 0 && (
+                    <p className="mt-2 text-xs text-gray-400">Add a language to enable export.</p>
+                  )}
+                </div>
               </div>
             </div>
 
