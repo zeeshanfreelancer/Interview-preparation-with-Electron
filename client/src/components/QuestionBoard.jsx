@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   FiEye,
   FiEyeOff,
@@ -210,6 +210,32 @@ export default function QuestionBoard({
     setDragOverIndex(null);
   };
 
+  const attemptCloseQuestionModal = useCallback(() => {
+    if (hasUnsavedChanges) {
+      const confirmed = window.confirm(
+        'You have unsaved changes. Are you sure you want to close without saving?'
+      );
+      if (!confirmed) return;
+    }
+    onCloseQuestionModal();
+  }, [hasUnsavedChanges, onCloseQuestionModal]);
+
+  useEffect(() => {
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape' && questionModalOpen) {
+        attemptCloseQuestionModal();
+      }
+    };
+
+    if (questionModalOpen) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [questionModalOpen, attemptCloseQuestionModal]);
+
   const handleDragOver = (event, index) => {
     if (!canReorder || draggedIndex === null) return;
     event.preventDefault();
@@ -388,7 +414,7 @@ export default function QuestionBoard({
 
       {/* Question Management Modal */}
       {questionModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={onCloseQuestionModal}>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={attemptCloseQuestionModal}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="sticky top-0 bg-white flex items-center justify-between p-6 border-b border-gray-200 z-10">
@@ -419,7 +445,7 @@ export default function QuestionBoard({
                     <FiCheck className="inline mr-2" /> Add Question
                   </button>
                 )}
-                <button onClick={onCloseQuestionModal} className="text-gray-400 hover:text-gray-600 text-2xl leading-none cursor-pointer">
+                <button onClick={attemptCloseQuestionModal} className="text-gray-400 hover:text-gray-600 text-2xl leading-none cursor-pointer">
                   <FiX />
                 </button>
               </div>

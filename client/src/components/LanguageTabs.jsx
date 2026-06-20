@@ -317,23 +317,6 @@ function LanguageTabs() {
     };
   }, [modalOpen]);
 
-  // Close question modal with Escape key
-  useEffect(() => {
-    const handleEscapeKey = (event) => {
-      if (event.key === 'Escape' && questionModalOpen) {
-        closeQuestionModal();
-      }
-    };
-
-    if (questionModalOpen) {
-      document.addEventListener('keydown', handleEscapeKey);
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
-    };
-  }, [questionModalOpen]);
-
   useEffect(() => {
     if (!activeLang || !tabsContainerRef.current) return;
     const activeTab = tabsContainerRef.current.querySelector(
