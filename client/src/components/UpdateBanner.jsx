@@ -42,9 +42,7 @@ export default function UpdateBanner() {
     });
 
     const unsubError = onUpdateError((message) => {
-      setError(message);
-      setStatus("error");
-      setVisible(true);
+      console.warn("Update error:", message);
     });
 
     checkForUpdates();

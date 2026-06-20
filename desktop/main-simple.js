@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require("electron");
 const path = require("path");
-const fs = require("fs/promises");
+const fs = require("fs");
+const fsPromises = require("fs/promises");
 const { autoUpdater } = require("electron-updater");
 
 let mainWindow = null;
@@ -44,7 +45,12 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on("error", (error) => {
-    sendToRenderer("update-error", error?.message || "Update failed");
+    const message = error?.message || "Update failed";
+    if (/latest\.yml|ENOENT|404|HttpError/i.test(message)) {
+      console.warn("Update check skipped:", message);
+      return;
+    }
+    sendToRenderer("update-error", message);
   });
 }
 
@@ -70,6 +76,13 @@ function createWindow() {
     }
   });
 
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    if (!isDev && !url.startsWith("file://")) {
+      event.preventDefault();
+    }
+  });
+
   Menu.setApplicationMenu(null);
 
   if (isDev) {
@@ -77,6 +90,16 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   } else {
     const indexPath = path.join(process.resourcesPath, "client", "dist", "index.html");
+
+    if (!fs.existsSync(indexPath)) {
+      dialog.showErrorBox(
+        "Interview Prep failed to start",
+        `App files were not found.\n\nExpected:\n${indexPath}\n\nPlease reinstall the application.`
+      );
+      app.quit();
+      return;
+    }
+
     mainWindow.loadFile(indexPath);
     mainWindow.webContents.once("did-finish-load", scheduleUpdateCheck);
   }
@@ -96,7 +119,7 @@ ipcMain.handle("dialog:openJsonFile", async () => {
   if (canceled || filePaths.length === 0) return null;
 
   const filePath = filePaths[0];
-  const content = await fs.readFile(filePath, "utf-8");
+  const content = await fsPromises.readFile(filePath, "utf-8");
   return { filePath, content };
 });
 
@@ -110,7 +133,7 @@ ipcMain.handle("dialog:saveFile", async (_event, { defaultPath, filters, content
   if (canceled || !filePath) return null;
 
   const payload = typeof content === "string" ? content : Buffer.from(content);
-  await fs.writeFile(filePath, payload);
+  await fsPromises.writeFile(filePath, payload);
   return filePath;
 });
 
