@@ -174,6 +174,30 @@ export const localStorageService = {
     }
   },
 
+  reorderLanguages(fromIndex, toIndex) {
+    try {
+      const languages = [...this.getLanguages()];
+
+      if (
+        fromIndex < 0 ||
+        fromIndex >= languages.length ||
+        toIndex < 0 ||
+        toIndex >= languages.length ||
+        fromIndex === toIndex
+      ) {
+        return languages;
+      }
+
+      const [moved] = languages.splice(fromIndex, 1);
+      languages.splice(toIndex, 0, moved);
+      this.saveLanguages(languages);
+      return languages;
+    } catch (error) {
+      console.error('Error reordering languages:', error);
+      throw new Error('Failed to reorder languages');
+    }
+  },
+
   deleteLanguage(language) {
     try {
       const languages = this.getLanguages().filter(lang => lang !== language);

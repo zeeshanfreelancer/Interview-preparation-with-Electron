@@ -7,7 +7,8 @@ import {
   FiX,
   FiPlus,
   FiSettings,
-  FiUpload
+  FiUpload,
+  FiMenu
 } from "react-icons/fi";
 import QuestionBoard from "./QuestionBoard";
 import { localStorageService } from "../services/localStorage";
@@ -37,6 +38,10 @@ function LanguageTabs() {
   const modalRef = useRef(null);
   const fileInputRef = useRef(null);
   const tabsContainerRef = useRef(null);
+  const [draggedLangIndex, setDraggedLangIndex] = useState(null);
+  const [dragOverLangIndex, setDragOverLangIndex] = useState(null);
+
+  const canReorderLanguages = languages.length > 1 && editingLang === null;
 
   const addLanguage = () => {
     if (!newLanguage.trim() || languages.includes(newLanguage.trim())) return;
@@ -258,6 +263,41 @@ function LanguageTabs() {
     setEditingValue("");
     setExportOptionsOpen(false);
     setSelectedExportFormat(null);
+    setDraggedLangIndex(null);
+    setDragOverLangIndex(null);
+  };
+
+  const handleLanguageDragStart = (index) => {
+    if (!canReorderLanguages) return;
+    setDraggedLangIndex(index);
+  };
+
+  const handleLanguageDragEnd = () => {
+    setDraggedLangIndex(null);
+    setDragOverLangIndex(null);
+  };
+
+  const handleLanguageDragOver = (event, index) => {
+    if (!canReorderLanguages || draggedLangIndex === null) return;
+    event.preventDefault();
+    setDragOverLangIndex(index);
+  };
+
+  const handleLanguageDrop = (event, dropIndex) => {
+    event.preventDefault();
+    if (!canReorderLanguages || draggedLangIndex === null || draggedLangIndex === dropIndex) {
+      handleLanguageDragEnd();
+      return;
+    }
+
+    try {
+      const reordered = localStorageService.reorderLanguages(draggedLangIndex, dropIndex);
+      setLanguages(reordered);
+    } catch (error) {
+      console.error('Failed to reorder languages:', error);
+    }
+
+    handleLanguageDragEnd();
   };
 
   // Close modal when clicking outside
@@ -487,12 +527,23 @@ function LanguageTabs() {
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
                   Languages ({languages.length})
+                  {canReorderLanguages && (
+                    <span className="ml-2 normal-case font-normal text-gray-400">· Drag to reorder</span>
+                  )}
                 </h3>
 
-                {languages.map((lang) => (
+                {languages.map((lang, index) => (
                   <div
                     key={lang}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    onDragOver={(event) => handleLanguageDragOver(event, index)}
+                    onDrop={(event) => handleLanguageDrop(event, index)}
+                    className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                      draggedLangIndex === index
+                        ? 'bg-purple-50 border border-dashed border-purple-300 opacity-60'
+                        : dragOverLangIndex === index && draggedLangIndex !== null && draggedLangIndex !== index
+                          ? 'bg-purple-50 border border-purple-400 ring-2 ring-purple-100'
+                          : 'bg-gray-50 hover:bg-gray-100'
+                    }`}
                   >
                     {editingLang === lang ? (
                       <div className="flex items-center gap-2 flex-1">
@@ -521,11 +572,27 @@ function LanguageTabs() {
                       </div>
                     ) : (
                       <>
-                        <span className={`font-medium ${activeLang === lang ? 'text-purple-600' : 'text-gray-700'}`}>
-                          {lang}
-                          {activeLang === lang && <span className="text-xs text-purple-500 ml-2">(active)</span>}
-                        </span>
-                        <div className="flex gap-1">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {canReorderLanguages && (
+                            <div
+                              draggable
+                              onDragStart={(event) => {
+                                handleLanguageDragStart(index);
+                                event.dataTransfer.effectAllowed = 'move';
+                              }}
+                              onDragEnd={handleLanguageDragEnd}
+                              className="p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing rounded hover:bg-gray-200 shrink-0"
+                              title="Drag to reorder"
+                            >
+                              <FiMenu size={16} />
+                            </div>
+                          )}
+                          <span className={`font-medium truncate ${activeLang === lang ? 'text-purple-600' : 'text-gray-700'}`}>
+                            {lang}
+                            {activeLang === lang && <span className="text-xs text-purple-500 ml-2">(active)</span>}
+                          </span>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
                           <button
                             onClick={() => startEditing(lang)}
                             className="px-3 py-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded text-sm font-medium transition-colors cursor-pointer"
