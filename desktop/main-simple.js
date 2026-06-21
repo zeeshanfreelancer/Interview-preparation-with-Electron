@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const fsPromises = require("fs/promises");
 const { autoUpdater } = require("electron-updater");
+const { getLicenseStatus, activateLicense } = require("./license/validator");
 
 let mainWindow = null;
 const isDev = !app.isPackaged;
@@ -167,6 +168,15 @@ ipcMain.handle("download-update", async () => {
 ipcMain.handle("install-update", () => {
   if (isDev) return { status: "dev" };
   autoUpdater.quitAndInstall();
+});
+
+ipcMain.handle("license:get-status", () => getLicenseStatus(isDev));
+
+ipcMain.handle("license:activate", (_event, password) => {
+  if (isDev) {
+    return { success: true, expiresAt: null, expiresLabel: null };
+  }
+  return activateLicense(password);
 });
 
 app.whenReady().then(() => {

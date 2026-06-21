@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# License secrets (never commit)
+desktop/license/private.pem
+desktop/license/passwords.json
