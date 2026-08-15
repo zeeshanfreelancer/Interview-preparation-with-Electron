@@ -66,7 +66,8 @@ Usage:
 Notes:
   - Passwords are stored in desktop/license/passwords.json (gitignored, for your records).
   - The app only ships licenses.manifest.json + public.pem (no plain passwords).
-  - After adding passwords, rebuild the app so the new manifest is included.
+  - For remote sync, upload desktop/license/licenses.manifest.json to your remote URL after every change.
+  - For offline-only builds, rebuild the app so the new manifest is included.
 `);
 }
 
@@ -110,7 +111,8 @@ function cmdAdd(args) {
   console.log(`Give this password to the user: ${password}`);
   console.log(`Expires: ${normalizeExpiry(expiresAt)}`);
   if (label) console.log(`Label: ${label}`);
-  console.log("Rebuild the desktop app to include the updated manifest.");
+  console.log("Upload desktop/license/licenses.manifest.json to your remote license URL.");
+  console.log("If you are not using remote sync, rebuild the desktop app to include it.");
 }
 
 function cmdRemove(args) {
@@ -123,7 +125,7 @@ function cmdRemove(args) {
   const entries = readPasswords().filter((entry) => entry.password !== password);
   writePasswords(entries);
   rebuildManifest(entries);
-  console.log("Password removed. Rebuild the desktop app to apply.");
+  console.log("Password removed. Upload the manifest to your remote license URL or rebuild the app.");
 }
 
 function cmdList() {

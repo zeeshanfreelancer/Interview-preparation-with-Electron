@@ -1,37 +1,9 @@
-const fs = require("fs");
-const path = require("path");
-const { app } = require("electron");
 const {
   hashPassword,
-  loadPublicKey,
-  verifyPayload,
   normalizeExpiry
 } = require("./crypto");
 const { readActivation, writeActivation, clearActivation } = require("./store");
-
-function getLicenseResourceDir() {
-  if (app.isPackaged) {
-    return path.join(process.resourcesPath, "license");
-  }
-  return path.join(__dirname);
-}
-
-function loadManifest() {
-  const manifestPath = path.join(getLicenseResourceDir(), "licenses.manifest.json");
-  if (!fs.existsSync(manifestPath)) {
-    return null;
-  }
-
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
-  const { signature, ...payload } = manifest;
-  const publicKey = loadPublicKey(getLicenseResourceDir());
-
-  if (!verifyPayload(payload, signature, publicKey)) {
-    throw new Error("License manifest signature is invalid");
-  }
-
-  return payload;
-}
+const { loadManifest } = require("./manifest");
 
 function findLicense(password, manifest) {
   if (!manifest?.licenses?.length) return null;
@@ -52,7 +24,7 @@ function formatExpiry(expiresAt) {
   });
 }
 
-function getLicenseStatus(isDev) {
+async function getLicenseStatus(isDev) {
   if (isDev) {
     return { status: "licensed", isDev: true, expiresAt: null, expiresLabel: null };
   }
@@ -72,7 +44,7 @@ function getLicenseStatus(isDev) {
   }
 
   try {
-    const manifest = loadManifest();
+    const manifest = await loadManifest();
     const manifestEntry = manifest?.licenses?.find((entry) => entry.hash === activation.hash);
 
     if (!manifestEntry || isExpired(manifestEntry.expiresAt)) {
@@ -101,7 +73,7 @@ function getLicenseStatus(isDev) {
   };
 }
 
-function activateLicense(password) {
+async function activateLicense(password) {
   const trimmed = password?.trim();
   if (!trimmed) {
     return { success: false, error: "Please enter a password." };
@@ -109,7 +81,7 @@ function activateLicense(password) {
 
   let manifest;
   try {
-    manifest = loadManifest();
+    manifest = await loadManifest();
   } catch (error) {
     return { success: false, error: error.message };
   }
