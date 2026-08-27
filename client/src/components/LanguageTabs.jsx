@@ -8,14 +8,56 @@ import {
   FiPlus,
   FiSettings,
   FiUpload,
-  FiMenu
+  FiMenu,
+  FiClock
 } from "react-icons/fi";
 import QuestionBoard from "./QuestionBoard";
 import { localStorageService } from "../services/localStorage";
 import { exportToPDF, exportToWord, exportToJSON, importFromJSON, importFromJSONString } from "../utils/exportImport";
 import { isElectron, openJsonFile } from "../utils/electron";
 
-function LanguageTabs() {
+const calculateRemainingTime = (expiresAt, now) => {
+  if (!expiresAt) return null;
+
+  const expiry = new Date(expiresAt);
+  if (Number.isNaN(expiry.getTime())) return null;
+
+  let remainingMs = expiry.getTime() - now;
+  if (remainingMs <= 0) {
+    return { expired: true, years: 0, months: 0, days: 0, hours: 0, minutes: 0 };
+  }
+
+  const cursor = new Date(now);
+  let years = 0;
+  let months = 0;
+
+  while (true) {
+    const next = new Date(cursor);
+    next.setFullYear(next.getFullYear() + 1);
+    if (next > expiry) break;
+    cursor.setFullYear(cursor.getFullYear() + 1);
+    years += 1;
+  }
+
+  while (true) {
+    const next = new Date(cursor);
+    next.setMonth(next.getMonth() + 1);
+    if (next > expiry) break;
+    cursor.setMonth(cursor.getMonth() + 1);
+    months += 1;
+  }
+
+  remainingMs = expiry.getTime() - cursor.getTime();
+  const days = Math.floor(remainingMs / 86_400_000);
+  remainingMs -= days * 86_400_000;
+  const hours = Math.floor(remainingMs / 3_600_000);
+  remainingMs -= hours * 3_600_000;
+  const minutes = Math.floor(remainingMs / 60_000);
+
+  return { expired: false, years, months, days, hours, minutes };
+};
+
+function LanguageTabs({ licenseState }) {
   const [languages, setLanguages] = useState(() => localStorageService.getLanguages());
   const [activeLang, setActiveLang] = useState(() => {
     const initialLanguages = localStorageService.getLanguages();
@@ -35,6 +77,7 @@ function LanguageTabs() {
   const [exportOptionsOpen, setExportOptionsOpen] = useState(false);
   const [selectedExportFormat, setSelectedExportFormat] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
   const modalRef = useRef(null);
   const fileInputRef = useRef(null);
   const tabsContainerRef = useRef(null);
@@ -42,6 +85,7 @@ function LanguageTabs() {
   const [dragOverLangIndex, setDragOverLangIndex] = useState(null);
 
   const canReorderLanguages = languages.length > 1 && editingLang === null;
+  const remainingLicenseTime = calculateRemainingTime(licenseState?.expiresAt, currentTime);
 
   const addLanguage = () => {
     if (!newLanguage.trim() || languages.includes(newLanguage.trim())) return;
@@ -254,6 +298,7 @@ function LanguageTabs() {
   };
 
   const openModal = () => {
+    setCurrentTime(Date.now());
     setModalOpen(true);
   };
 
@@ -324,6 +369,16 @@ function LanguageTabs() {
     );
     activeTab?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }, [activeLang, languages]);
+
+  useEffect(() => {
+    if (!modalOpen || !licenseState?.expiresAt) return undefined;
+
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60_000);
+
+    return () => clearInterval(interval);
+  }, [modalOpen, licenseState?.expiresAt]);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -486,6 +541,41 @@ function LanguageTabs() {
 
             {/* Modal Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
+              {/* License Status */}
+              <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-100">
+                <div className="flex items-center gap-2 text-purple-700 font-semibold mb-2">
+                  <FiClock />
+                  <span>License Time Remaining</span>
+                </div>
+
+                {licenseState?.expiresAt ? (
+                  remainingLicenseTime?.expired ? (
+                    <p className="text-sm text-red-600 font-medium">Expired</p>
+                  ) : (
+                    <div className="grid grid-cols-5 gap-2 text-center">
+                      {[
+                        ["Years", remainingLicenseTime?.years ?? 0],
+                        ["Months", remainingLicenseTime?.months ?? 0],
+                        ["Days", remainingLicenseTime?.days ?? 0],
+                        ["Hours", remainingLicenseTime?.hours ?? 0],
+                        ["Minutes", remainingLicenseTime?.minutes ?? 0]
+                      ].map(([label, value]) => (
+                        <div key={label} className="bg-white rounded-lg px-2 py-2 border border-purple-100">
+                          <div className="text-lg font-bold text-gray-800">{value}</div>
+                          <div className="text-[11px] text-gray-500">{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  <p className="text-sm text-gray-600">No expiry date for this license.</p>
+                )}
+
+                {licenseState?.expiresLabel && (
+                  <p className="text-xs text-gray-500 mt-3">Expires on {licenseState.expiresLabel}</p>
+                )}
+              </div>
+
               {/* Add Language Section */}
               <div className="mb-6">
                 <div className="flex gap-3">
