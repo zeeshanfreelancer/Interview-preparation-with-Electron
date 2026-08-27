@@ -4,7 +4,11 @@
     {
       "hash": "e5c0d1e16bafabc0d35582460d8a9c0e21a05c78dea8b992944b7e63572bd59e",
       "expiresAt": "2026-08-17T18:59:59.999Z"
+    },
+    {
+      "hash": "386ef249e8ded51735551fe96c1ca70f5458c237b89e5c0b59b6ab511d22db44",
+      "expiresAt": "2026-08-28T18:59:59.999Z"
     }
   ],
-  "signature": "BnSh1Z8Xx9iexNkZNJYG9JirI1hNGK3aeXSjLxWcNn3Rb0npMrLCoqvaIplpoj9kyqDbtcfgcT7QlWwG4IcEDQ=="
+  "signature": "MhYCQqU9eFyhTkbJQSF7KGvpalO0muk4z+J4pJunzbtzqWZLsbOdKCCGTjbHa9E5ZIML9hSZbN9IXrq0QG34BQ=="
 }
