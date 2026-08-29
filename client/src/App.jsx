@@ -39,23 +39,29 @@ function App() {
 
   if (licenseState.loading) {
     return (
-      <div className="min-h-screen bg-blue-100 flex items-center justify-center">
-        <p className="text-gray-600">Loading...</p>
-      </div>
+      <>
+        <div className="min-h-screen bg-blue-100 flex items-center justify-center">
+          <p className="text-gray-600">Loading...</p>
+        </div>
+        <UpdateBanner />
+      </>
     );
   }
 
   if (licenseState.status !== "licensed") {
     return (
-      <LicenseScreen
-        status={licenseState.status}
-        expiresLabel={licenseState.expiresLabel}
-        onActivated={() => {
-          getLicenseStatus().then((result) => {
-            setLicenseState({ loading: false, ...result });
-          });
-        }}
-      />
+      <>
+        <LicenseScreen
+          status={licenseState.status}
+          expiresLabel={licenseState.expiresLabel}
+          onActivated={() => {
+            getLicenseStatus().then((result) => {
+              setLicenseState({ loading: false, ...result });
+            });
+          }}
+        />
+        <UpdateBanner />
+      </>
     );
   }
 
