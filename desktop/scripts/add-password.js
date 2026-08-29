@@ -59,11 +59,14 @@ function printHelp() {
   console.log(`
 Usage:
   node scripts/add-password.js add --password "MyPass123" --expires "2026-12-31" [--label "Customer name"]
+  node scripts/add-password.js add --password "MyPass123" --expires "2026-12-31 18:30" [--label "Customer name"]
   node scripts/add-password.js remove --password "MyPass123"
   node scripts/add-password.js list
   node scripts/add-password.js init
 
 Notes:
+  - Date-only expiry uses the end of that local day: 23:59.
+  - Date and time expiry uses the exact local time you provide.
   - Passwords are stored in desktop/license/passwords.json (gitignored, for your records).
   - The app only ships licenses.manifest.json + public.pem (no plain passwords).
   - For remote sync, upload desktop/license/licenses.manifest.json to your remote URL after every change.

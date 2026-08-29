@@ -1,10 +1,5 @@
 {
   "version": 1,
-  "licenses": [
-    {
-      "hash": "386ef249e8ded51735551fe96c1ca70f5458c237b89e5c0b59b6ab511d22db44",
-      "expiresAt": "2026-08-28T18:59:59.999Z"
-    }
-  ],
-  "signature": "MhYCQqU9eFyhTkbJQSF7KGvpalO0muk4z+J4pJunzbtzqWZLsbOdKCCGTjbHa9E5ZIML9hSZbN9IXrq0QG34BQ=="
+  "licenses": [],
+  "signature": "Q03oXjldb0ArgJsGLPgGbjvhlOm8WmEJe0hB3BC068fdC455bgPr3l72LlBg5U2JTOpedLmHLwGqzw4GqqZABw=="
 }
